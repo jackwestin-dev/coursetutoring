@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JW Session Grader</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+            margin: 0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #fff;
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #8892b0;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+        .card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 35px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 12px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: border-color 0.2s;
+        }
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #4a90d9;
+        }
+        textarea {
+            height: 220px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        .row {
+            display: flex;
+            gap: 20px;
+        }
+        .row .form-group {
+            flex: 1;
+        }
+        .btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #4a90d9 0%, #357abd 100%);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(74, 144, 217, 0.4);
+        }
+        .btn:disabled {
+            background: #ccc;
+            transform: none;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 25px;
+            padding: 18px;
+            border-radius: 10px;
+            display: none;
+        }
+        .result.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .result.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 12px;
+            max-height: 600px;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+            line-height: 1.6;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 30px;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4a90d9;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .loading p {
+            color: #666;
+            font-size: 15px;
+        }
+        @media (max-width: 600px) {
+            .row { flex-direction: column; gap: 0; }
+            h1 { font-size: 1.8rem; }
+            .card { padding: 25px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>JW Session Grader</h1>
+        <p class="subtitle">Session 1 Quality Assurance - Comprehensive Report Generator</p>
+        
+        <div class="card">
+            <form id="gradeForm">
+                <div class="row">
+                    <div class="form-group">
+                        <label for="studentName">Student Name</label>
+                        <input type="text" id="studentName" required placeholder="e.g., Anji Herman">
+                    </div>
+                    <div class="form-group">
+                        <label for="tutorName">Tutor Name</label>
+                        <input type="text" id="tutorName" required placeholder="e.g., Ian Abrams">
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="form-group">
+                        <label for="tutorEmail">Tutor Email</label>
+                        <input type="email" id="tutorEmail" required placeholder="tutor@jackwestin.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="sessionDate">Session Date</label>
+                        <input type="date" id="sessionDate" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="transcript">Paste Session Transcript</label>
+                    <textarea id="transcript" required placeholder="Paste the full tutoring session transcript here..."></textarea>
+                </div>
+                
+                <button type="submit" class="btn" id="submitBtn">Grade Session and Send Report</button>
+            </form>
+            
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Analyzing transcript and generating comprehensive report...</p>
+            </div>
+            
+            <div class="result" id="result"></div>
+            <pre id="report" style="display:none;"></pre>
+        </div>
+    </div>
+
+    <script>
+        // Set today's date as default
+        document.getElementById('sessionDate').valueAsDate = new Date();
+        
+        document.getElementById('gradeForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const result = document.getElementById('result');
+            const report = document.getElementById('report');
+            const loading = document.getElementById('loading');
+            const btn = document.getElementById('submitBtn');
+            
+            // Reset UI
+            result.style.display = 'none';
+            report.style.display = 'none';
+            loading.style.display = 'block';
+            btn.disabled = true;
+            
+            const data = {
+                student_name: document.getElementById('studentName').value,
+                tutor_name: document.getElementById('tutorName').value,
+                tutor_email: document.getElementById('tutorEmail').value,
+                session_date: document.getElementById('sessionDate').value,
+                transcript: document.getElementById('transcript').value
+            };
+            
+            try {
+                const response = await fetch('/api/grade', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                const json = await response.json();
+                
+                if (json.success) {
+                    result.className = 'result success';
+                    result.innerHTML = '<strong>Grading Complete!</strong><br>' +
+                        'Overall Rating: ' + json.overall_rating + '<br>' +
+                        'Average Score: ' + json.average_score + '/10<br>' +
+                        'Email Sent: ' + (json.email_sent ? 'Yes' : 'No - check email configuration');
+                    report.textContent = json.report;
+                    report.style.display = 'block';
+                } else {
+                    result.className = 'result error';
+                    result.innerHTML = '<strong>Error:</strong> ' + json.error;
+                }
+            } catch (err) {
+                result.className = 'result error';
+                result.innerHTML = '<strong>Error:</strong> ' + err.message;
+            }
+            
+            loading.style.display = 'none';
+            result.style.display = 'block';
+            btn.disabled = false;
+        });
+    </script>
+</body>
+</html>

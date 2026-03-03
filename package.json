@@ -1,0 +1,17 @@
+{
+  "name": "course_tutoring_app",
+  "version": "1.0.0",
+  "description": "A web application that grades MCAT tutoring Session 1 transcripts and emails reports to tutors and directors.",
+  "main": "index.js",
+  "scripts": {
+    "deploy": "vercel --prod",
+    "dev": "vercel dev",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "vercel": "^50.14.0"
+  }
+}
