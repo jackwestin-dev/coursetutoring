@@ -244,25 +244,25 @@ function ReportRenderer({ text }) {
   while (i < lines.length) {
     const line = lines[i];
     if (line.startsWith("## ")) {
-      out.push(<h2 key={i} style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#6c47ff", borderBottom: "1px solid #ece9ff", paddingBottom: 8, marginTop: 32, marginBottom: 14 }}>{line.replace("## ", "")}</h2>);
+      out.push(<h2 key={i} style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#8A5CF6", borderBottom: "1px solid #EDE9FE", paddingBottom: 8, marginTop: 32, marginBottom: 14 }}>{line.replace("## ", "")}</h2>);
     } else if (line.startsWith("### ")) {
-      out.push(<h3 key={i} style={{ fontSize: 14, fontWeight: 600, color: "#1a1a2e", marginTop: 20, marginBottom: 6 }}>{line.replace("### ", "")}</h3>);
+      out.push(<h3 key={i} style={{ fontSize: 14, fontWeight: 600, color: "#2B2F40", marginTop: 20, marginBottom: 6 }}>{line.replace("### ", "")}</h3>);
     } else if (line.startsWith("| ")) {
       const tLines = [];
       while (i < lines.length && lines[i].startsWith("|")) { tLines.push(lines[i]); i++; }
       const rows = tLines.filter(l => !/^\|[-:\s|]+\|$/.test(l));
       out.push(
-        <div key={`t${i}`} style={{ overflowX: "auto", margin: "12px 0", borderRadius: 8, border: "1px solid #ebebf0" }}>
+        <div key={`t${i}`} style={{ overflowX: "auto", margin: "12px 0", borderRadius: 10, border: "1px solid #E5E7EB" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <tbody>{rows.map((row, ri) => {
               const cells = row.split("|").slice(1, -1);
               const isH = ri === 0;
-              return <tr key={ri} style={{ borderBottom: ri < rows.length - 1 ? "1px solid #ebebf0" : "none" }}>
+              return <tr key={ri} style={{ borderBottom: ri < rows.length - 1 ? "1px solid #E5E7EB" : "none" }}>
                 {cells.map((cell, ci) => {
                   const clean = cell.trim().replace(/\*\*/g, "");
                   return isH
-                    ? <th key={ci} style={{ textAlign: "left", padding: "8px 14px", fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "#888", background: "#fafafa", borderBottom: "2px solid #ece9ff" }}>{clean}</th>
-                    : <td key={ci} style={{ padding: "8px 14px", color: "#333", background: ri % 2 === 0 ? "#fff" : "#fdfcff", fontSize: 13 }}>{clean}</td>;
+                    ? <th key={ci} style={{ textAlign: "left", padding: "8px 14px", fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "#5E6573", background: "#F9FAFB", borderBottom: "2px solid #EDE9FE" }}>{clean}</th>
+                    : <td key={ci} style={{ padding: "8px 14px", color: "#2B2F40", background: ri % 2 === 0 ? "#fff" : "#FAFAFF", fontSize: 13 }}>{clean}</td>;
                 })}
               </tr>;
             })}</tbody>
@@ -271,17 +271,17 @@ function ReportRenderer({ text }) {
       );
       continue;
     } else if (/^\d+\.\s/.test(line)) {
-      out.push(<div key={i} style={{ display: "flex", gap: 10, margin: "4px 0", alignItems: "flex-start" }}><span style={{ color: "#6c47ff", fontWeight: 700, fontSize: 13, minWidth: 20 }}>{line.match(/^(\d+)\./)[1]}.</span><span style={{ color: "#444", fontSize: 13, lineHeight: 1.65 }} dangerouslySetInnerHTML={{ __html: line.replace(/^\d+\.\s/, "").replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>") }} /></div>);
+      out.push(<div key={i} style={{ display: "flex", gap: 10, margin: "4px 0", alignItems: "flex-start" }}><span style={{ color: "#8A5CF6", fontWeight: 700, fontSize: 13, minWidth: 20 }}>{line.match(/^(\d+)\./)[1]}.</span><span style={{ color: "#5E6573", fontSize: 13, lineHeight: 1.65 }} dangerouslySetInnerHTML={{ __html: line.replace(/^\d+\.\s/, "").replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>") }} /></div>);
     } else if (line.startsWith("- ")) {
-      out.push(<div key={i} style={{ display: "flex", gap: 9, margin: "3px 0", alignItems: "flex-start" }}><span style={{ color: "#6c47ff", fontSize: 8, marginTop: 6, flexShrink: 0 }}>●</span><span style={{ color: "#555", fontSize: 13, lineHeight: 1.65 }} dangerouslySetInnerHTML={{ __html: line.replace(/^-\s/, "").replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>") }} /></div>);
+      out.push(<div key={i} style={{ display: "flex", gap: 9, margin: "3px 0", alignItems: "flex-start" }}><span style={{ color: "#8A5CF6", fontSize: 8, marginTop: 6, flexShrink: 0 }}>●</span><span style={{ color: "#5E6573", fontSize: 13, lineHeight: 1.65 }} dangerouslySetInnerHTML={{ __html: line.replace(/^-\s/, "").replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>") }} /></div>);
     } else if (line.startsWith("**") && line.endsWith("**")) {
-      out.push(<p key={i} style={{ fontWeight: 700, color: "#1a1a2e", margin: "10px 0 4px", fontSize: 13 }}>{line.replace(/\*\*/g, "")}</p>);
+      out.push(<p key={i} style={{ fontWeight: 700, color: "#2B2F40", margin: "10px 0 4px", fontSize: 13 }}>{line.replace(/\*\*/g, "")}</p>);
     } else if (line === "---") {
-      out.push(<hr key={i} style={{ border: "none", borderTop: "1px solid #ebebf0", margin: "24px 0" }} />);
+      out.push(<hr key={i} style={{ border: "none", borderTop: "1px solid #E5E7EB", margin: "24px 0" }} />);
     } else if (!line.trim()) {
       out.push(<div key={i} style={{ height: 4 }} />);
     } else {
-      out.push(<p key={i} style={{ color: "#555", fontSize: 13, lineHeight: 1.7, margin: "3px 0" }} dangerouslySetInnerHTML={{ __html: line.replace(/\*\*([^*]+)\*\*/g, "<strong style='color:#1a1a2e'>$1</strong>") }} />);
+      out.push(<p key={i} style={{ color: "#5E6573", fontSize: 13, lineHeight: 1.7, margin: "3px 0" }} dangerouslySetInnerHTML={{ __html: line.replace(/\*\*([^*]+)\*\*/g, "<strong style='color:#2B2F40'>$1</strong>") }} />);
     }
     i++;
   }
@@ -302,16 +302,16 @@ function RatingBadge({ rating }) {
 function ScoreRing({ score }) {
   const pct = Math.min(100, score || 0);
   const r = 34, circ = 2 * Math.PI * r, dash = (pct / 100) * circ;
-  const color = pct >= 90 ? "#16a34a" : pct >= 75 ? "#6c47ff" : pct >= 60 ? "#d97706" : "#dc2626";
+  const color = pct >= 90 ? "#16a34a" : pct >= 75 ? "#8A5CF6" : pct >= 60 ? "#d97706" : "#dc2626";
   return (
     <div style={{ position: "relative", width: 88, height: 88, flexShrink: 0 }}>
       <svg width={88} height={88} style={{ transform: "rotate(-90deg)" }}>
-        <circle cx={44} cy={44} r={r} fill="none" stroke="#ebebf0" strokeWidth={7} />
+        <circle cx={44} cy={44} r={r} fill="none" stroke="#E5E7EB" strokeWidth={7} />
         <circle cx={44} cy={44} r={r} fill="none" stroke={color} strokeWidth={7} strokeDasharray={`${dash} ${circ - dash}`} strokeLinecap="round" />
       </svg>
       <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-        <span style={{ fontSize: 19, fontWeight: 800, color: "#1a1a2e", lineHeight: 1 }}>{score}</span>
-        <span style={{ fontSize: 10, color: "#bbb", fontWeight: 500 }}>/100</span>
+        <span style={{ fontSize: 19, fontWeight: 800, color: "#2B2F40", lineHeight: 1 }}>{score}</span>
+        <span style={{ fontSize: 10, color: "#5E6573", fontWeight: 500 }}>/100</span>
       </div>
     </div>
   );
@@ -321,23 +321,23 @@ function EmailPanel({ title, subtitle, tagColor, subject, body }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   return (
-    <div style={{ border: "1px solid #e8e8f0", borderRadius: 10, overflow: "hidden", marginBottom: 10 }}>
-      <div onClick={() => setOpen(o => !o)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 16px", background: "#fafafa", cursor: "pointer", userSelect: "none" }}>
+    <div style={{ border: "1px solid #E5E7EB", borderRadius: 10, overflow: "hidden", marginBottom: 10 }}>
+      <div onClick={() => setOpen(o => !o)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 16px", background: "#F9FAFB", cursor: "pointer", userSelect: "none" }}>
         <span style={{ width: 8, height: 8, borderRadius: "50%", background: tagColor, flexShrink: 0 }} />
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1a2e" }}>{title}</div>
-          <div style={{ fontSize: 11, color: "#aaa", marginTop: 1 }}>{subtitle}</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "#2B2F40" }}>{title}</div>
+          <div style={{ fontSize: 11, color: "#5E6573", marginTop: 1 }}>{subtitle}</div>
         </div>
-        <span style={{ fontSize: 16, color: "#bbb", transform: open ? "rotate(90deg)" : "none", transition: "transform 0.15s" }}>›</span>
+        <span style={{ fontSize: 16, color: "#9CA3AF", transform: open ? "rotate(90deg)" : "none", transition: "transform 0.15s" }}>›</span>
       </div>
       {open && (
-        <div style={{ padding: "14px 16px", background: "#fff", borderTop: "1px solid #e8e8f0" }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#aaa", marginBottom: 4 }}>Subject</div>
-          <div style={{ fontSize: 13, color: "#1a1a2e", fontWeight: 500, marginBottom: 12 }}>{subject}</div>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#aaa", marginBottom: 4 }}>Body</div>
-          <pre style={{ fontSize: 12, color: "#444", lineHeight: 1.7, whiteSpace: "pre-wrap", wordBreak: "break-word", background: "#f7f7fb", border: "1px solid #ebebf0", borderRadius: 8, padding: "12px 14px", fontFamily: "inherit", maxHeight: 300, overflowY: "auto", marginBottom: 10 }}>{body}</pre>
+        <div style={{ padding: "14px 16px", background: "#fff", borderTop: "1px solid #E5E7EB" }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#5E6573", marginBottom: 4 }}>Subject</div>
+          <div style={{ fontSize: 13, color: "#2B2F40", fontWeight: 500, marginBottom: 12 }}>{subject}</div>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#5E6573", marginBottom: 4 }}>Body</div>
+          <pre style={{ fontSize: 12, color: "#5E6573", lineHeight: 1.7, whiteSpace: "pre-wrap", wordBreak: "break-word", background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: 10, padding: "12px 14px", fontFamily: "inherit", maxHeight: 300, overflowY: "auto", marginBottom: 10 }}>{body}</pre>
           <button onClick={() => { navigator.clipboard.writeText(`Subject: ${subject}\n\n${body}`); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-            style={{ padding: "7px 14px", background: copied ? "#6c47ff" : "#fff", border: "1.5px solid #6c47ff", borderRadius: 7, color: copied ? "#fff" : "#6c47ff", fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.15s" }}>
+            style={{ padding: "8px 16px", background: copied ? "#8A5CF6" : "#fff", border: "1.5px solid #8A5CF6", borderRadius: 10, color: copied ? "#fff" : "#8A5CF6", fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.15s" }}>
             {copied ? "Copied!" : "Copy email"}
           </button>
         </div>
@@ -355,20 +355,20 @@ function RecordingCard({ rec, selected, onSelect }) {
 
   return (
     <div onClick={() => onSelect(rec)} style={{
-      padding: "13px 15px", borderRadius: 10, cursor: "pointer", userSelect: "none",
-      border: selected ? "2px solid #6c47ff" : "1.5px solid #e2e2eb",
-      background: selected ? "#faf8ff" : "#fff", transition: "all 0.15s",
+      padding: "13px 15px", borderRadius: 12, cursor: "pointer", userSelect: "none",
+      border: selected ? "2px solid #8A5CF6" : "1.5px solid #E5E7EB",
+      background: selected ? "#FAF5FF" : "#fff", transition: "all 0.15s",
       display: "flex", alignItems: "flex-start", gap: 12,
     }}>
       <div style={{ width: 10, height: 10, borderRadius: "50%", background: hasTranscript ? "#16a34a" : "#f59e0b", marginTop: 4, flexShrink: 0 }} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1a2e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "#2B2F40", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {rec.title || `Session — ${tutor?.name || "Unknown tutor"}`}
           </div>
-          <div style={{ fontSize: 11, color: "#aaa", whiteSpace: "nowrap", flexShrink: 0 }}>{date}</div>
+          <div style={{ fontSize: 11, color: "#5E6573", whiteSpace: "nowrap", flexShrink: 0 }}>{date}</div>
         </div>
-        <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>
+        <div style={{ fontSize: 12, color: "#5E6573", marginTop: 2 }}>
           {tutor ? `${tutor.name}` : "Unmatched"}{time ? ` · ${time}` : ""}
           {rec.participants?.length > 0 && ` · ${rec.participants.slice(0,3).join(", ")}`}
         </div>
@@ -383,7 +383,7 @@ function RecordingCard({ rec, selected, onSelect }) {
   );
 }
 
-const inputBase = { width: "100%", padding: "10px 14px", border: "1.5px solid #e2e2eb", borderRadius: 8, fontSize: 13, color: "#1a1a2e", background: "#fff", outline: "none", fontFamily: "inherit", transition: "border-color 0.15s, box-shadow 0.15s" };
+const inputBase = { width: "100%", padding: "10px 14px", border: "1.5px solid #E5E7EB", borderRadius: 10, fontSize: 13, color: "#2B2F40", background: "#fff", outline: "none", fontFamily: "inherit", transition: "border-color 0.15s, box-shadow 0.15s" };
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function CARSGrader() {
@@ -400,7 +400,7 @@ export default function CARSGrader() {
   const [form, setForm] = useState({
     studentName: "", tutorName: "", tutorEmail: "",
     sessionDate: new Date().toISOString().split("T")[0],
-    sessionNumber: "1", transcript: "", studentDoc: "", studySchedule: "",
+    sessionNumber: "1", transcript: "", studentDoc: "", studySchedule: "", fathomNotes: "",
   });
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
 
@@ -527,7 +527,7 @@ export default function CARSGrader() {
     setGradeError(null); setReport(null); setEmails(null); setScore(null); setRating(null); setLoading(true);
     try {
       const gradeText = await callClaude(GRADING_PROMPT,
-        `STUDENT: ${form.studentName||"Not provided"}\nTUTOR: ${form.tutorName||"Not provided"}\nSESSION: ${form.sessionNumber}\nDATE: ${form.sessionDate}\n\nTRANSCRIPT:\n${form.transcript}\n\nSTUDENT NOTES:\n${form.studentDoc}\n\nSTUDY SCHEDULE (reference only):\n${form.studySchedule||"Not provided"}`
+        `STUDENT: ${form.studentName||"Not provided"}\nTUTOR: ${form.tutorName||"Not provided"}\nSESSION: ${form.sessionNumber}\nDATE: ${form.sessionDate}\n\nTRANSCRIPT:\n${form.transcript}\n\nSTUDENT NOTES:\n${form.studentDoc}\n\nSTUDY SCHEDULE (reference only):\n${form.studySchedule||"Not provided"}\n\nFATHOM NOTES / SUMMARY (if provided):\n${form.fathomNotes||"Not provided"}`
       );
       setReport(gradeText);
 
@@ -567,25 +567,25 @@ export default function CARSGrader() {
           { k: "sessionDate", l: "Session Date", t: "date", ph: "" },
         ].map(({ k, l, t, ph }) => (
           <div key={k} style={{ marginBottom: 14 }}>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#444", marginBottom: 6 }}>{l}</label>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#2B2F40", marginBottom: 6 }}>{l}</label>
             <input type={t} placeholder={ph} value={form[k]} onChange={set(k)} style={inputBase} />
           </div>
         ))}
       </div>
       <div style={{ marginBottom: 16 }}>
-        <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#444", marginBottom: 6 }}>Session Number</label>
-        <select value={form.sessionNumber} onChange={set("sessionNumber")} style={{ ...inputBase, cursor: "pointer", appearance: "none", backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23aaa' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right 13px center", paddingRight: 36 }}>
+        <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#2B2F40", marginBottom: 6 }}>Session Number</label>
+        <select value={form.sessionNumber} onChange={set("sessionNumber")} style={{ ...inputBase, cursor: "pointer", appearance: "none", backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%235E6573' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right 13px center", paddingRight: 36 }}>
           <option value="1">Session 1 — Onboarding &amp; Plan Build</option>
           <option value="2">Session 2 — Adherence &amp; Adjustment</option>
           <option value="3">Session 3 — Timed Pressure &amp; Diagnostics</option>
         </select>
       </div>
-      <div style={{ height: 1, background: "#e8e8f0", margin: "4px 0 16px" }} />
+      <div style={{ height: 1, background: "#E5E7EB", margin: "4px 0 16px" }} />
 
       {/* Transcript */}
       <div style={{ marginBottom: 16 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-          <label style={{ fontSize: 12, fontWeight: 600, color: "#444" }}>Session Transcript <span style={{ color: "#dc2626" }}>*</span></label>
+          <label style={{ fontSize: 12, fontWeight: 600, color: "#2B2F40" }}>Session Transcript <span style={{ color: "#dc2626" }}>*</span></label>
           {showTranscriptBadge && selectedRec?.transcript &&
             <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 8, background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0" }}>✓ Auto-loaded from Fathom</span>}
           {showTranscriptBadge && !selectedRec?.transcript &&
@@ -595,27 +595,35 @@ export default function CARSGrader() {
       </div>
 
       <div style={{ marginBottom: 16 }}>
-        <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#444", marginBottom: 6 }}>
+        <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#2B2F40", marginBottom: 6 }}>
           Student Notes Document <span style={{ color: "#dc2626" }}>*</span>
-          <span style={{ fontWeight: 400, color: "#bbb", fontSize: 11, marginLeft: 8 }}>Primary artifact being graded</span>
+          <span style={{ fontWeight: 400, color: "#5E6573", fontSize: 11, marginLeft: 8 }}>Primary artifact being graded</span>
         </label>
         <textarea rows={7} placeholder="Paste the Course Tutoring Notes Template contents…" value={form.studentDoc} onChange={set("studentDoc")} style={{ ...inputBase, resize: "vertical", lineHeight: 1.6 }} />
       </div>
 
-      <div style={{ marginBottom: 18 }}>
-        <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#444", marginBottom: 6 }}>
+      <div style={{ marginBottom: 16 }}>
+        <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#2B2F40", marginBottom: 6 }}>
           Study Schedule
-          <span style={{ fontWeight: 400, color: "#bbb", fontSize: 11, marginLeft: 8 }}>Reference only — not graded</span>
+          <span style={{ fontWeight: 400, color: "#5E6573", fontSize: 11, marginLeft: 8 }}>Reference only — not graded</span>
         </label>
         <textarea rows={3} placeholder="Optional…" value={form.studySchedule} onChange={set("studySchedule")} style={{ ...inputBase, resize: "vertical", lineHeight: 1.6 }} />
       </div>
 
+      <div style={{ marginBottom: 18 }}>
+        <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#2B2F40", marginBottom: 6 }}>
+          Fathom notes / summary
+          <span style={{ fontWeight: 400, color: "#5E6573", fontSize: 11, marginLeft: 8 }}>Optional — paste Fathom-generated summary or meeting notes</span>
+        </label>
+        <textarea rows={4} placeholder="Paste Fathom summary or meeting notes here (e.g. AI summary, action items)…" value={form.fathomNotes} onChange={set("fathomNotes")} style={{ ...inputBase, resize: "vertical", lineHeight: 1.6 }} />
+      </div>
+
       {gradeError && <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "10px 14px", color: "#dc2626", fontSize: 13, marginBottom: 14 }}>{gradeError}</div>}
 
-      <button onClick={handleGrade} disabled={loading} style={{ width: "100%", padding: "13px", background: loading ? "#a78bfa" : "#6c47ff", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, boxShadow: loading ? "none" : "0 4px 16px rgba(108,71,255,0.3)", transition: "all 0.15s" }}>
+      <button onClick={handleGrade} disabled={loading} style={{ width: "100%", padding: "14px 24px", background: loading ? "#B88AFF" : "linear-gradient(135deg, #8A5CF6 0%, #B88AFF 100%)", color: "#fff", border: "none", borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, boxShadow: loading ? "none" : "0 4px 16px rgba(138,92,246,0.35)", transition: "all 0.15s" }}>
         {loading
           ? <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2.5" style={{ animation: "spin 0.8s linear infinite", flexShrink: 0 }}><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" /></svg>Grading session + generating emails…</>
-          : "Grade this session →"}
+          : <>Grade this session <span style={{ marginLeft: 4 }}>→</span></>}
       </button>
     </>
   );
@@ -625,45 +633,45 @@ export default function CARSGrader() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #f4f4f8 !important; }
-        input:focus, textarea:focus, select:focus { border-color: #6c47ff !important; box-shadow: 0 0 0 3px rgba(108,71,255,0.12) !important; outline: none; }
+        body { background: #fff !important; }
+        input:focus, textarea:focus, select:focus { border-color: #8A5CF6 !important; box-shadow: 0 0 0 3px rgba(138,92,246,0.12) !important; outline: none; }
         textarea { font-family: 'Inter', sans-serif; }
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         .rlist { max-height: 420px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
         .rlist::-webkit-scrollbar { width: 4px; }
-        .rlist::-webkit-scrollbar-thumb { background: #e2e2eb; border-radius: 2px; }
+        .rlist::-webkit-scrollbar-thumb { background: #E5E7EB; border-radius: 2px; }
       `}</style>
 
-      <div style={{ minHeight: "100vh", background: "#f4f4f8", fontFamily: "'Inter', sans-serif", paddingBottom: 80 }}>
+      <div style={{ minHeight: "100vh", background: "#fff", fontFamily: "'Inter', sans-serif", paddingBottom: 80 }}>
 
         {/* Nav */}
-        <nav style={{ background: "#fff", borderBottom: "1px solid #e8e8f0", padding: "0 24px", height: 52, display: "flex", alignItems: "center", position: "sticky", top: 0, zIndex: 20 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 26, height: 26, borderRadius: 6, background: "linear-gradient(135deg, #6c47ff 0%, #a78bfa 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ color: "#fff", fontSize: 10, fontWeight: 800 }}>JW</span>
+        <nav style={{ background: "#fff", borderBottom: "1px solid #E5E7EB", padding: "0 24px", height: 56, display: "flex", alignItems: "center", position: "sticky", top: 0, zIndex: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg, #8A5CF6 0%, #B88AFF 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span style={{ color: "#fff", fontSize: 11, fontWeight: 800 }}>JW</span>
             </div>
-            <span style={{ fontSize: 13, fontWeight: 700, color: "#1a1a2e" }}>CARS Session Grader</span>
-            <span style={{ width: 1, height: 14, background: "#e2e2eb", margin: "0 4px" }} />
-            <span style={{ fontSize: 12, color: "#aaa" }}>Internal QA Tool</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: "#2B2F40" }}>CARS Session Grader</span>
+            <span style={{ width: 1, height: 14, background: "#E5E7EB", margin: "0 6px" }} />
+            <span style={{ fontSize: 12, color: "#5E6573" }}>Internal QA Tool</span>
           </div>
         </nav>
 
         <div style={{ maxWidth: 780, margin: "0 auto", padding: "40px 20px 0" }}>
 
           {/* Hero */}
-          <div style={{ marginBottom: 28 }}>
-            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", color: "#6c47ff", textTransform: "uppercase", marginBottom: 10 }}>The CARS Strategy Course</p>
-            <h1 style={{ fontSize: "clamp(24px, 4vw, 34px)", fontWeight: 800, color: "#1a1a2e", lineHeight: 1.15, letterSpacing: "-0.025em", marginBottom: 10 }}>Session grading, powered by AI.</h1>
-            <p style={{ fontSize: 14, color: "#666", lineHeight: 1.65, maxWidth: 560 }}>
+          <div style={{ marginBottom: 32 }}>
+            <p style={{ fontSize: 12, fontWeight: 600, letterSpacing: "0.08em", color: "#5E6573", textTransform: "uppercase", marginBottom: 12 }}>The CARS Strategy Course</p>
+            <h1 style={{ fontSize: "clamp(26px, 4vw, 38px)", fontWeight: 700, color: "#2B2F40", lineHeight: 1.2, letterSpacing: "-0.02em", marginBottom: 12 }}>Session grading, powered by AI.</h1>
+            <p style={{ fontSize: 15, color: "#5E6573", lineHeight: 1.7, maxWidth: 560 }}>
               Sync with Fathom to auto-load transcripts for any JW tutor session, then grade in one click.
             </p>
           </div>
 
           {/* Tabs */}
-          <div style={{ display: "flex", gap: 6, marginBottom: 20 }}>
+          <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
             {[["fathom", "Sync from Fathom"], ["manual", "Manual entry"]].map(([t, l]) => (
-              <button key={t} onClick={() => setTab(t)} style={{ padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", border: tab === t ? "none" : "1.5px solid #e2e2eb", background: tab === t ? "#6c47ff" : "#fff", color: tab === t ? "#fff" : "#666", boxShadow: tab === t ? "0 2px 8px rgba(108,71,255,0.25)" : "none", transition: "all 0.15s" }}>
+              <button key={t} onClick={() => setTab(t)} style={{ padding: "10px 20px", borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: "pointer", border: tab === t ? "none" : "1.5px solid #E5E7EB", background: tab === t ? "linear-gradient(135deg, #8A5CF6 0%, #B88AFF 100%)" : "#fff", color: tab === t ? "#fff" : "#5E6573", boxShadow: tab === t ? "0 2px 12px rgba(138,92,246,0.3)" : "none", transition: "all 0.15s" }}>
                 {l}
               </button>
             ))}
@@ -674,21 +682,21 @@ export default function CARSGrader() {
             <div style={{ animation: "fadeUp 0.2s ease" }}>
 
               {/* Sync card */}
-              <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e8e8f0", padding: "22px 24px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", marginBottom: 14 }}>
-                <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#bbb", marginBottom: 14 }}>Fathom sync</p>
+              <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #E5E7EB", padding: "22px 24px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", marginBottom: 14 }}>
+                <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#5E6573", marginBottom: 14 }}>Fathom sync</p>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-                  <p style={{ fontSize: 13, color: "#666", lineHeight: 1.5 }}>
+                  <p style={{ fontSize: 13, color: "#5E6573", lineHeight: 1.5 }}>
                     Pulls all recent meetings from Fathom and matches sessions where a JW tutor is a participant.
-                    <br/><span style={{ fontSize: 11, color: "#aaa" }}>API key configured via <code style={{ background: "#f4f4f8", padding: "1px 5px", borderRadius: 4, fontSize: 11 }}>FATHOM_API_KEY</code> environment variable.</span>
+                    <br/><span style={{ fontSize: 11, color: "#5E6573" }}>API key configured via <code style={{ background: "#F9FAFB", padding: "2px 6px", borderRadius: 6, fontSize: 11, border: "1px solid #E5E7EB" }}>FATHOM_API_KEY</code> environment variable.</span>
                   </p>
-                  <button onClick={handleFathomSync} disabled={syncing} style={{ padding: "10px 20px", background: syncing ? "#a78bfa" : "#6c47ff", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: syncing ? "not-allowed" : "pointer", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 8, boxShadow: syncing ? "none" : "0 2px 10px rgba(108,71,255,0.28)", transition: "all 0.15s", flexShrink: 0 }}>
+                  <button onClick={handleFathomSync} disabled={syncing} style={{ padding: "12px 24px", background: syncing ? "#B88AFF" : "linear-gradient(135deg, #8A5CF6 0%, #B88AFF 100%)", color: "#fff", border: "none", borderRadius: 12, fontSize: 13, fontWeight: 700, cursor: syncing ? "not-allowed" : "pointer", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 8, boxShadow: syncing ? "none" : "0 2px 12px rgba(138,92,246,0.35)", transition: "all 0.15s", flexShrink: 0 }}>
                     {syncing
                       ? <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2.5" style={{ animation: "spin 0.8s linear infinite" }}><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" /></svg>Syncing…</>
                       : "↻ Sync Fathom"}
                   </button>
                 </div>
                 {syncError && <div style={{ marginTop: 12, background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "10px 14px", color: "#dc2626", fontSize: 13 }}>{syncError}</div>}
-                {syncStatus && <p style={{ fontSize: 12, color: "#888", marginTop: 10 }}>{syncStatus}</p>}
+                {syncStatus && <p style={{ fontSize: 12, color: "#5E6573", marginTop: 10 }}>{syncStatus}</p>}
                 {recordings.length > 0 && (
                   <div style={{ marginTop: 12, display: "flex", gap: 16, flexWrap: "wrap" }}>
                     <span style={{ fontSize: 11, display: "flex", alignItems: "center", gap: 5, color: "#16a34a" }}><span style={{ width: 8, height: 8, borderRadius: "50%", background: "#16a34a", display: "inline-block" }} />Transcript ready ({withTranscriptCount})</span>
@@ -699,8 +707,8 @@ export default function CARSGrader() {
 
               {/* Recordings list */}
               {recordings.length > 0 && (
-                <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e8e8f0", padding: "18px 18px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", marginBottom: 14 }}>
-                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#bbb", marginBottom: 12 }}>
+                <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #E5E7EB", padding: "18px 18px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", marginBottom: 14 }}>
+                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#5E6573", marginBottom: 12 }}>
                     {recordings.length} JW tutor sessions found — select one to grade
                   </p>
                   <div className="rlist">
@@ -713,8 +721,8 @@ export default function CARSGrader() {
 
               {/* Grade form — shown when a recording is selected */}
               {selectedRec && (
-                <div style={{ background: "#fff", borderRadius: 12, border: "2px solid #6c47ff", padding: "22px 24px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", animation: "fadeUp 0.2s ease" }}>
-                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#6c47ff", marginBottom: 16 }}>Grade selected session</p>
+                <div style={{ background: "#fff", borderRadius: 12, border: "2px solid #8A5CF6", padding: "22px 24px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", animation: "fadeUp 0.2s ease" }}>
+                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#8A5CF6", marginBottom: 16 }}>Grade selected session</p>
                   <GradeForm showTranscriptBadge={true} />
                 </div>
               )}
@@ -723,8 +731,8 @@ export default function CARSGrader() {
 
           {/* ── MANUAL TAB ── */}
           {tab === "manual" && (
-            <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e8e8f0", padding: "24px 24px 20px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", animation: "fadeUp 0.2s ease" }}>
-              <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#bbb", marginBottom: 16 }}>Session details</p>
+            <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #E5E7EB", padding: "24px 24px 20px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", animation: "fadeUp 0.2s ease" }}>
+              <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#5E6573", marginBottom: 16 }}>Session details</p>
               <GradeForm showTranscriptBadge={false} />
             </div>
           )}
@@ -732,19 +740,19 @@ export default function CARSGrader() {
           {/* ── RESULTS ── */}
           {report && (
             <div ref={reportRef} style={{ marginTop: 24, animation: "fadeUp 0.4s ease" }}>
-              <div style={{ background: "#fff", border: "1px solid #e8e8f0", borderRadius: 12, padding: "18px 22px", marginBottom: 10, display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+              <div style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: "18px 22px", marginBottom: 10, display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                 {score !== null && <ScoreRing score={score} />}
                 <div style={{ flex: 1, minWidth: 180 }}>
-                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#bbb", marginBottom: 6 }}>Grading complete</p>
+                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#5E6573", marginBottom: 6 }}>Grading complete</p>
                   <div style={{ marginBottom: 7 }}>{rating && <RatingBadge rating={rating} />}</div>
-                  <p style={{ fontSize: 12, color: "#999" }}>{[form.tutorName, form.studentName, `Session ${form.sessionNumber}`, form.sessionDate].filter(Boolean).join(" · ")}</p>
+                  <p style={{ fontSize: 12, color: "#5E6573" }}>{[form.tutorName, form.studentName, `Session ${form.sessionNumber}`, form.sessionDate].filter(Boolean).join(" · ")}</p>
                 </div>
-                <button onClick={() => navigator.clipboard.writeText(report)} style={{ padding: "7px 14px", border: "1.5px solid #6c47ff", borderRadius: 8, background: "#fff", color: "#6c47ff", fontSize: 12, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>Copy report</button>
+                <button onClick={() => navigator.clipboard.writeText(report)} style={{ padding: "8px 16px", border: "1.5px solid #8A5CF6", borderRadius: 10, background: "#fff", color: "#8A5CF6", fontSize: 12, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>Copy report</button>
               </div>
 
               {/* Score bands */}
-              <div style={{ background: "#fafafa", border: "1px solid #e8e8f0", borderRadius: 10, padding: "11px 16px", marginBottom: 10, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#bbb" }}>Score bands</span>
+              <div style={{ background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: 10, padding: "11px 16px", marginBottom: 10, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#5E6573" }}>Score bands</span>
                 {[["90–100","#16a34a","#f0fdf4","#bbf7d0","Exceeds"],["75–89","#2563eb","#eff6ff","#bfdbfe","Meets"],["60–74","#d97706","#fffbeb","#fde68a","Coach"],["<60","#dc2626","#fef2f2","#fecaca","Remediate"]].map(([range,c,bg,b,l])=>(
                   <span key={range} style={{padding:"3px 10px",borderRadius:8,background:bg,border:`1px solid ${b}`,fontSize:11,color:c,fontWeight:600}}><strong>{range}</strong> — {l}</span>
                 ))}
@@ -752,14 +760,14 @@ export default function CARSGrader() {
 
               {emails && (
                 <div style={{ marginBottom: 10 }}>
-                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#aaa", marginBottom: 8 }}>Email drafts</p>
-                  <EmailPanel title="Tutor Feedback Email" subtitle={`To: ${form.tutorEmail || form.tutorName || "tutor"} · Detailed grading report`} tagColor="#6c47ff" subject={emails.tutorEmail?.subject} body={emails.tutorEmail?.body} />
+                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#5E6573", marginBottom: 8 }}>Email drafts</p>
+                  <EmailPanel title="Tutor Feedback Email" subtitle={`To: ${form.tutorEmail || form.tutorName || "tutor"} · Detailed grading report`} tagColor="#8A5CF6" subject={emails.tutorEmail?.subject} body={emails.tutorEmail?.body} />
                   <EmailPanel title="Management Summary" subtitle="To: Anastasia, Molly, Carl, Adam · Triage + full tutor draft" tagColor="#f59e0b" subject={emails.managementEmail?.subject} body={emails.managementEmail?.body} />
                 </div>
               )}
 
-              <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#aaa", marginBottom: 8 }}>Full grading report</p>
-              <div style={{ background: "#fff", border: "1px solid #e8e8f0", borderRadius: 12, padding: "26px 26px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+              <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#5E6573", marginBottom: 8 }}>Full grading report</p>
+              <div style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: "26px 26px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                 <ReportRenderer text={report} />
               </div>
             </div>
