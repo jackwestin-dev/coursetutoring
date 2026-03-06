@@ -215,6 +215,129 @@ OUTPUT — produce exactly this markdown:
 
 Bands: 90-100=Exceeds, 75-89=Meets, 60-74=Needs Minor Calibration, <60=Needs Remediation. Any failed gate=Needs Remediation.`;
 
+// 515+ Course & Intensive — original rubric (Tutoring Session Grading & Feedback SOP)
+const ORIGINAL_GRADING_PROMPT = `You are the JW Session Grader for the 515+ MCAT Course and Intensive course. Grade using the standard tutoring session rubric (NOT the CARS-specific rubric).
+
+UNIVERSAL RULES (all sessions)
+- Grade the NOTES primarily; transcript shows what should be documented and session quality.
+- Evidence must be explicit. No credit for implied content. Partial credit when partial documentation exists.
+- Any category without concrete evidence loses 50% of its points.
+- Strategy Portion receives 0 points if teach-back does not occur.
+- Missing any Pass/Fail Gate → Needs Remediation regardless of score.
+
+PASS/FAIL GATES (missing any = Needs Remediation):
+Session Notes Template copied and completed | Strategy Portion completed (teach-back occurred) | Study Plan updated | Fathom summary forwarded to Molly Kielty and Anastasia (mark Unable to Verify if not evidenced)
+
+SESSION 1 — Onboarding & Plan Build (100 pts rubric + 50 pts teaching = 150, scaled to 100)
+A. Preparation & Planning Readiness — 20 pts: Baseline reviewed, test date framed, topic gaps identified
+B. Study Plan Construction Quality — 30 pts: Exam schedule, AAMC deadlines, weekly checklist, daily tasks for Week 1
+C. Personalization & Load Calibration — 15 pts: Plan matches availability and constraints
+D. Strategy Portion Execution — 25 pts: Teach-back, feedback, tough questions, plan updates
+E. Clarity & Student Buy-In — 10 pts: Student understands plan and next steps
+
+Required in Session 1 notes: Exam schedule | AAMC deadlines | Below-average topics (excluding course-covered) | Weekly checklist | Daily tasks Week 1 | Strategy portion notes | Tentative next session date
+
+SESSION 2 — Adherence & Adjustment (100 pts + 50 teaching = 150, scaled to 100)
+A. Prep & Data Review — 15 pts: Checklist reviewed prior to meeting
+B. Accountability & Reflection Execution — 25 pts: Reflection survey used to diagnose roadblocks
+C. Plan Adjustment Quality — 20 pts: Adjustments specific and constraint-aware
+D. Time Management Coaching — 15 pts: Concrete pacing or scheduling changes
+E. Strategy Portion Execution — 25 pts: Teach-back, feedback, assignments added
+
+Required in Session 2 notes: Weekly checklist completion status | Roadblocks + interventions | Updated study schedule | Strategy notes | Next session tentatively scheduled
+
+SESSION 3 — Timed Pressure & Diagnostics (100 pts + 50 teaching = 150, scaled to 100)
+A. Diagnostic Design Quality — 20 pts: Weakest section selected, instructions clear
+B. Accountability Enforcement — 20 pts: Completion + review + reflections enforced
+C. Timing & Accuracy Analysis — 25 pts: Data entered, insights specific
+D. Personalized Coaching Using Visuals — 15 pts: Visual timing guidance + rules
+E. Strategy Portion Execution — 20 pts: Teach-back + targeted practice assigned
+
+Required in Session 3 notes: Reflection responses | Timing and accuracy insights | Personalized timing advice | Updated Study Plan to test day
+
+TEACHING & LEARNING (50 pts, from transcript): Approachability 10 | Science Passage Framing 15 | CARS Passage Framing 15 | Student Metacognition 10
+
+OUTPUT — produce exactly this markdown:
+---
+## SECTION 1: QUICK VERDICT
+| Field | Value |
+|-------|-------|
+| Student | [name] |
+| Tutor | [name] |
+| Session | [1/2/3] |
+| Session Date | [date] |
+| Overall Rating | [Exceeds Expectations / Meets Expectations / Needs Minor Calibration / Needs Remediation] |
+| Biggest Risk | [1 sentence] |
+
+**Pass/Fail Gates:**
+- Notes Template: [PASS / FAIL]
+- Strategy Portion: [PASS / FAIL]
+- Study Plan Updated: [PASS / FAIL]
+- Fathom Forwarded: [Unable to Verify / PASS / FAIL]
+
+**Top 3 Fixes:**
+1. [fix]
+2. [fix]
+3. [fix]
+
+---
+## SECTION 2: CATEGORY SCORES
+### A. [Name] — [score]/[max] pts
+**Justification:** [evidence-based observation]
+**Next step:** [actionable next step]
+**Missing from Notes:**
+- [bullets]
+[repeat B–E]
+
+---
+## SECTION 3: SOP COMPLIANCE CHECKLIST
+| SOP Item | Status | Evidence |
+|----------|--------|----------|
+[all items]
+**Compliance Summary:** [X] fully met, [Y] partial, [Z] missing
+
+---
+## SECTION 4: TRANSCRIPT COACHING QUALITY (Teaching & Learning)
+| Behavior | Score | Observation |
+|----------|-------|-------------|
+| Approachability | X/10 | [evidence] |
+| Science Passage Framing | X/15 | [evidence] |
+| CARS Passage Framing | X/15 | [evidence] |
+| Student Metacognition | X/10 | [evidence] |
+| **Subtotal** | **X/50** | |
+
+---
+## SECTION 5: TRANSCRIPT vs. NOTES GAP ANALYSIS
+| Topic Discussed | In Notes? | Impact |
+|-----------------|-----------|--------|
+[key topics]
+
+---
+## SECTION 6: TUTOR FEEDBACK
+### What You Did Well
+1. [positive with evidence]
+2. [positive with evidence]
+
+### Areas for Improvement
+1. **[Issue Title]**
+   - What happened: [desc]
+   - Why it matters: [impact]
+   - How to fix: [guidance]
+
+---
+## SECTION 7: FINAL SCORE SUMMARY
+| Category | Score | Max |
+|----------|-------|-----|
+| A. [Name] | X | XX |
+[repeat B–E]
+| Teaching & Learning | X | 50 |
+| **TOTAL** | **X** | **150** |
+**Scaled Score:** X/100
+**Overall Assessment:** [rating]
+**Summary:** [3-4 sentences]
+
+Bands: 90-100=Exceeds, 75-89=Meets, 60-74=Needs Minor Calibration, <60=Needs Remediation. Any failed gate=Needs Remediation.`;
+
 const EMAIL_PROMPT = `You are a professional email writer for Jack Westin's MCAT tutoring program. Given a grading report, produce TWO emails as JSON only — no markdown fences, no preamble:
 {"tutorEmail":{"subject":"...","body":"..."},"managementEmail":{"subject":"...","body":"..."}}
 
@@ -400,7 +523,7 @@ export default function CARSGrader() {
   const [form, setForm] = useState({
     studentName: "", tutorName: "", tutorEmail: "",
     sessionDate: new Date().toISOString().split("T")[0],
-    sessionNumber: "1", transcript: "", studentDoc: "", studySchedule: "", fathomNotes: "",
+    courseType: "515", sessionNumber: "1", transcript: "", studentDoc: "", studySchedule: "", fathomNotes: "",
   });
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
 
@@ -526,8 +649,9 @@ export default function CARSGrader() {
     }
     setGradeError(null); setReport(null); setEmails(null); setScore(null); setRating(null); setLoading(true);
     try {
-      const gradeText = await callClaude(GRADING_PROMPT,
-        `STUDENT: ${form.studentName||"Not provided"}\nTUTOR: ${form.tutorName||"Not provided"}\nSESSION: ${form.sessionNumber}\nDATE: ${form.sessionDate}\n\nTRANSCRIPT:\n${form.transcript}\n\nSTUDENT NOTES:\n${form.studentDoc}\n\nSTUDY SCHEDULE (reference only):\n${form.studySchedule||"Not provided"}\n\nFATHOM NOTES / SUMMARY (if provided):\n${form.fathomNotes||"Not provided"}`
+      const gradingPrompt = (form.courseType === "cars") ? GRADING_PROMPT : ORIGINAL_GRADING_PROMPT;
+      const gradeText = await callClaude(gradingPrompt,
+        `COURSE TYPE: ${form.courseType === "515" ? "515+ Course" : form.courseType === "intensive" ? "Intensive" : "CARS Strategy"}\nSTUDENT: ${form.studentName||"Not provided"}\nTUTOR: ${form.tutorName||"Not provided"}\nSESSION: ${form.sessionNumber}\nDATE: ${form.sessionDate}\n\nTRANSCRIPT:\n${form.transcript}\n\nSTUDENT NOTES:\n${form.studentDoc}\n\nSTUDY SCHEDULE (reference only):\n${form.studySchedule||"Not provided"}\n\nFATHOM NOTES / SUMMARY (if provided):\n${form.fathomNotes||"Not provided"}`
       );
       setReport(gradeText);
 
@@ -571,6 +695,14 @@ export default function CARSGrader() {
             <input type={t} placeholder={ph} value={form[k]} onChange={set(k)} style={inputBase} />
           </div>
         ))}
+      </div>
+      <div style={{ marginBottom: 16 }}>
+        <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#2B2F40", marginBottom: 6 }}>Course type</label>
+        <select value={form.courseType} onChange={set("courseType")} style={{ ...inputBase, cursor: "pointer", appearance: "none", backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%235E6573' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right 13px center", paddingRight: 36 }}>
+          <option value="515">515+ Course</option>
+          <option value="intensive">Intensive</option>
+          <option value="cars">CARS Strategy</option>
+        </select>
       </div>
       <div style={{ marginBottom: 16 }}>
         <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#2B2F40", marginBottom: 6 }}>Session Number</label>
@@ -651,7 +783,7 @@ export default function CARSGrader() {
             <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg, #8A5CF6 0%, #B88AFF 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <span style={{ color: "#fff", fontSize: 11, fontWeight: 800 }}>JW</span>
             </div>
-            <span style={{ fontSize: 14, fontWeight: 700, color: "#2B2F40" }}>CARS Session Grader</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: "#2B2F40" }}>Session Grader</span>
             <span style={{ width: 1, height: 14, background: "#E5E7EB", margin: "0 6px" }} />
             <span style={{ fontSize: 12, color: "#5E6573" }}>Internal QA Tool</span>
           </div>
@@ -661,10 +793,10 @@ export default function CARSGrader() {
 
           {/* Hero */}
           <div style={{ marginBottom: 32 }}>
-            <p style={{ fontSize: 12, fontWeight: 600, letterSpacing: "0.08em", color: "#5E6573", textTransform: "uppercase", marginBottom: 12 }}>The CARS Strategy Course</p>
+            <p style={{ fontSize: 12, fontWeight: 600, letterSpacing: "0.08em", color: "#5E6573", textTransform: "uppercase", marginBottom: 12 }}>515+ · Intensive · CARS</p>
             <h1 style={{ fontSize: "clamp(26px, 4vw, 38px)", fontWeight: 700, color: "#2B2F40", lineHeight: 1.2, letterSpacing: "-0.02em", marginBottom: 12 }}>Session grading, powered by AI.</h1>
             <p style={{ fontSize: 15, color: "#5E6573", lineHeight: 1.7, maxWidth: 560 }}>
-              Sync with Fathom to auto-load transcripts for any JW tutor session, then grade in one click.
+              Grade 515+, Intensive, or CARS sessions. Sync with Fathom or paste transcript and notes.
             </p>
           </div>
 
