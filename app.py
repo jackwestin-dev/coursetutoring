@@ -13,12 +13,14 @@ import ssl
 import urllib.request
 import urllib.error
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
 from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
+load_dotenv()
 app = Flask(__name__)
 CORS(app)
 
