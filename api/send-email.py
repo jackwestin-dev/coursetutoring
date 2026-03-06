@@ -18,7 +18,8 @@ SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
 FROM_EMAIL = os.environ.get("FROM_EMAIL", "grader@jackwestin.com")
 # SMTP_USER = login for SMTP; if unset, FROM_EMAIL is used
 SMTP_USER = os.environ.get("SMTP_USER", "").strip() or FROM_EMAIL
-SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
+# Strip spaces so pasted App Passwords with spaces don't break auth
+SMTP_PASSWORD = (os.environ.get("SMTP_PASSWORD", "") or "").strip().replace(" ", "")
 
 
 def get_director_emails():

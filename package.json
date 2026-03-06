@@ -1,7 +1,7 @@
 {
   "name": "course_tutoring_app",
   "version": "1.0.0",
-  "description": "JW CARS Session Grader — grade MCAT CARS tutoring sessions with Fathom sync and Claude.",
+  "description": "JW Session Grader — grade 515+, Intensive, and CARS sessions; daily director digest with intervention list.",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -12,10 +12,6 @@
       "use": "@vercel/python"
     },
     {
-      "src": "api/fathom.py",
-      "use": "@vercel/python"
-    },
-    {
       "src": "api/claude.py",
       "use": "@vercel/python"
     },
@@ -33,11 +29,10 @@
     }
   ],
   "crons": [
-    { "path": "/api/director-digest", "schedule": "0 9 */3 * *" }
+    { "path": "/api/director-digest", "schedule": "0 14 * * *" }
   ],
   "routes": [
     { "src": "/api/grade", "dest": "/api/grade.py" },
-    { "src": "/api/fathom", "dest": "/api/fathom.py" },
     { "src": "/api/claude", "dest": "/api/claude.py" },
     { "src": "/api/send-email", "dest": "/api/send-email.py" },
     { "src": "/api/record-session", "dest": "/api/record-session.py" },
