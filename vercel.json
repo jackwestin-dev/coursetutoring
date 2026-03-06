@@ -1,9 +1,12 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-  "installCommand": "npm install",
-  "buildCommand": "npm run build",
   "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": { "distDir": "dist" }
+    },
     {
       "src": "api/grade.py",
       "use": "@vercel/python"
@@ -15,17 +18,13 @@
     {
       "src": "api/claude.py",
       "use": "@vercel/python"
-    },
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": { "distDir": "dist" }
     }
   ],
   "routes": [
     { "src": "/api/grade", "dest": "/api/grade.py" },
     { "src": "/api/fathom", "dest": "/api/fathom.py" },
     { "src": "/api/claude", "dest": "/api/claude.py" },
+    { "src": "/assets/(.*)", "dest": "/assets/$1" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
