@@ -10,12 +10,12 @@ from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
 from http.server import BaseHTTPRequestHandler
 
-# Email config from environment
+# Email config from environment (SMTP_SERVER = hostname only, e.g. smtp.office365.com)
 SMTP_SERVER = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
 SMTP_PORT = int(os.getenv('SMTP_PORT', 587))
-SMTP_USER = os.getenv('SMTP_USER', '')
-SMTP_PASSWORD = os.getenv('SMTP_PASSWORD', '')
 FROM_EMAIL = os.getenv('FROM_EMAIL', '')
+SMTP_USER = (os.getenv('SMTP_USER', '') or FROM_EMAIL).strip()
+SMTP_PASSWORD = os.getenv('SMTP_PASSWORD', '')
 DIRECTOR_EMAIL = os.getenv('DIRECTOR_EMAIL', 'anastasia@jackwestin.com')
 
 

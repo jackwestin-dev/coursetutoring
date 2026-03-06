@@ -12,11 +12,13 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from http.server import BaseHTTPRequestHandler
 
+# SMTP_SERVER = hostname only (e.g. smtp.office365.com or smtp.gmail.com), not an email address
 SMTP_SERVER = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
 SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
-SMTP_USER = os.environ.get("SMTP_USER", "")
-SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
 FROM_EMAIL = os.environ.get("FROM_EMAIL", "grader@jackwestin.com")
+# SMTP_USER = login for SMTP; if unset, FROM_EMAIL is used
+SMTP_USER = os.environ.get("SMTP_USER", "").strip() or FROM_EMAIL
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
 
 
 def get_director_emails():
@@ -51,7 +53,7 @@ def send_email(to_emails, subject, body):
 class handler(BaseHTTPRequestHandler):
     def _cors(self):
         self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
 
     def _json(self, status, data):
@@ -65,6 +67,16 @@ class handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self._cors()
         self.end_headers()
+
+    def do_GET(self):
+        """Diagnostic: check if SMTP and recipients are configured (no secrets)."""
+        to_emails = get_director_emails()
+        smtp_ok = bool(SMTP_USER and SMTP_PASSWORD)
+        self._json(200, {
+            "smtp_configured": smtp_ok,
+            "recipients_count": len(to_emails),
+            "hint": "Set SMTP_SERVER (hostname), SMTP_PORT (587), FROM_EMAIL, SMTP_PASSWORD, and DIRECTOR_EMAIL or DIRECTOR_EMAILS in Vercel." if not smtp_ok else None,
+        })
 
     def do_POST(self):
         content_length = int(self.headers.get("Content-Length", 0))

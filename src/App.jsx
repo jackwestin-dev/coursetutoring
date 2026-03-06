@@ -1,88 +1,5 @@
 import { useState, useRef } from "react";
 
-// ─── Known JW tutors (from Calendly org roster) ───────────────────────────────
-const JW_TUTORS = [
-  { name: "Ian Abrams",         email: "ianabrams@jackwestin.com" },
-  { name: "Aditya Gurbani",     email: "aditya@jackwestin.com" },
-  { name: "Akshat Patwardhan",  email: "akshat@jackwestin.com" },
-  { name: "Alexander Phillip",  email: "alexander@jackwestin.com" },
-  { name: "Anita Paschall",     email: "anita@jackwestin.com" },
-  { name: "Athavan Murugaanathan", email: "athavan@jackwestin.com" },
-  { name: "Audrey Leonard",     email: "audrey@jackwestin.com" },
-  { name: "Bayla Khrian",       email: "bayla@jackwestin.com" },
-  { name: "Cole Crossett",      email: "cole@jackwestin.com" },
-  { name: "Courtney Brandt",    email: "courtney@jackwestin.com" },
-  { name: "Darya Sulkouskaya",  email: "darya@jackwestin.com" },
-  { name: "Garrett Oleen",      email: "garrett@jackwestin.com" },
-  { name: "Ian Phoenix",        email: "ian@jackwestin.com" },
-  { name: "Isabella Impalli",   email: "isabella@jackwestin.com" },
-  { name: "Jesse Grossman",     email: "jesse@jackwestin.com" },
-  { name: "Joseph Toth",        email: "joseph@jackwestin.com" },
-  { name: "Joshua Dinii",       email: "joshua@jackwestin.com" },
-  { name: "Kris Gamble",        email: "kris@jackwestin.com" },
-  { name: "Livana Pichardo",    email: "livana@jackwestin.com" },
-  { name: "Mark White",         email: "mark@jackwestin.com" },
-  { name: "Marwan Abdrabou",    email: "marwan@jackwestin.com" },
-  { name: "Matthew Cohen",      email: "matthewc@jackwestin.com" },
-  { name: "Nicholas McDonald",  email: "nickm@jackwestin.com" },
-  { name: "Olivia Helou",       email: "olivia@jackwestin.com" },
-  { name: "Paul Walker",        email: "paulw@jackwestin.com" },
-  { name: "Renee Light",        email: "reneel@jackwestin.com" },
-  { name: "Steven Faragalla",   email: "steven@jackwestin.com" },
-  { name: "Tejas Prasanna",     email: "tejas@jackwestin.com" },
-  { name: "Thomas Fuller",      email: "thomas@jackwestin.com" },
-  { name: "Tyler Falk",         email: "tylerfalk@jackwestin.com" },
-  { name: "William Walsh",      email: "william@jackwestin.com" },
-  { name: "Zander Roemer",      email: "zander@jackwestin.com" },
-];
-
-const TUTOR_FIRST_NAMES = new Set(JW_TUTORS.map(t => t.name.split(" ")[0].toLowerCase()));
-const TUTOR_FULL_NAMES  = new Set(JW_TUTORS.map(t => t.name.toLowerCase()));
-
-// Match a meeting participant name against the JW tutor roster
-function matchTutor(participantName) {
-  if (!participantName) return null;
-  const lower = participantName.toLowerCase().trim();
-  // Full name match first
-  const full = JW_TUTORS.find(t => t.name.toLowerCase() === lower);
-  if (full) return full;
-  // Partial: first name match
-  const first = JW_TUTORS.find(t => t.name.toLowerCase().startsWith(lower) || lower.startsWith(t.name.split(" ")[0].toLowerCase()));
-  return first || null;
-}
-
-// ─── Fathom API (via Vercel proxy) ───────────────────────────────────────────
-// Key lives in FATHOM_API_KEY env var on Vercel — never touches the browser
-async function fathomGet(path) {
-  const [pathname, qs] = path.split("?");
-  const proxyUrl = `/api/fathom?path=${encodeURIComponent(pathname)}${qs ? `&${qs}` : ""}`;
-  const r = await fetch(proxyUrl);
-  if (!r.ok) {
-    const body = await r.text();
-    throw new Error(`Fathom ${r.status}: ${body.slice(0, 120)}`);
-  }
-  return r.json();
-}
-
-function formatTranscript(rawData) {
-  // Handle array of segments directly
-  const segments = Array.isArray(rawData)
-    ? rawData
-    : (rawData?.transcript || rawData?.segments || rawData?.utterances || []);
-
-  if (!segments.length) {
-    return typeof rawData === "string" ? rawData : (rawData?.text || rawData?.content || "");
-  }
-
-  return segments.map(s => {
-    const speaker = typeof s.speaker === "object"
-      ? (s.speaker?.display_name || s.speaker?.name || "Unknown")
-      : (s.speaker || "Unknown");
-    const ts = s.timestamp ? `[${s.timestamp}] ` : "";
-    return `${ts}${speaker}: ${(s.text || s.content || "").trim()}`;
-  }).filter(Boolean).join("\n\n");
-}
-
 // ─── Grading system prompt ────────────────────────────────────────────────────
 const GRADING_PROMPT = `You are the JW CARS Session Grader, an internal QA agent for Jack Westin MCAT CARS Strategy Course tutoring.
 
@@ -469,56 +386,10 @@ function EmailPanel({ title, subtitle, tagColor, subject, body }) {
   );
 }
 
-// ─── Recording card ───────────────────────────────────────────────────────────
-function RecordingCard({ rec, selected, onSelect }) {
-  const tutor = rec.matchedTutor;
-  const date = rec.date ? new Date(rec.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—";
-  const time = rec.date ? new Date(rec.date).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "";
-  const hasTranscript = !!rec.transcript;
-
-  return (
-    <div onClick={() => onSelect(rec)} style={{
-      padding: "13px 15px", borderRadius: 12, cursor: "pointer", userSelect: "none",
-      border: selected ? "2px solid #8A5CF6" : "1.5px solid #E5E7EB",
-      background: selected ? "#FAF5FF" : "#fff", transition: "all 0.15s",
-      display: "flex", alignItems: "flex-start", gap: 12,
-    }}>
-      <div style={{ width: 10, height: 10, borderRadius: "50%", background: hasTranscript ? "#16a34a" : "#f59e0b", marginTop: 4, flexShrink: 0 }} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "#2B2F40", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {rec.title || `Session — ${tutor?.name || "Unknown tutor"}`}
-          </div>
-          <div style={{ fontSize: 11, color: "#5E6573", whiteSpace: "nowrap", flexShrink: 0 }}>{date}</div>
-        </div>
-        <div style={{ fontSize: 12, color: "#5E6573", marginTop: 2 }}>
-          {tutor ? `${tutor.name}` : "Unmatched"}{time ? ` · ${time}` : ""}
-          {rec.participants?.length > 0 && ` · ${rec.participants.slice(0,3).join(", ")}`}
-        </div>
-        <div style={{ marginTop: 6, display: "flex", gap: 6 }}>
-          {hasTranscript
-            ? <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 10, background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0" }}>Transcript ready</span>
-            : <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 10, background: "#fffbeb", color: "#d97706", border: "1px solid #fde68a" }}>Transcript loading…</span>}
-          {tutor && <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 10, background: "#eff6ff", color: "#2563eb", border: "1px solid #bfdbfe" }}>JW Tutor matched</span>}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 const inputBase = { width: "100%", padding: "10px 14px", border: "1.5px solid #E5E7EB", borderRadius: 10, fontSize: 13, color: "#2B2F40", background: "#fff", outline: "none", fontFamily: "inherit", transition: "border-color 0.15s, box-shadow 0.15s" };
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function CARSGrader() {
-  const [tab, setTab] = useState("fathom");
-
-  // Fathom sync state
-  const [syncing, setSyncing] = useState(false);
-  const [syncError, setSyncError] = useState(null);
-  const [syncStatus, setSyncStatus] = useState("");
-  const [recordings, setRecordings] = useState([]); // all JW-tutor-matched recordings
-  const [selectedRec, setSelectedRec] = useState(null);
-
   // Form
   const [form, setForm] = useState({
     studentName: "", tutorName: "", tutorEmail: "",
@@ -537,101 +408,6 @@ export default function CARSGrader() {
   const [rating, setRating] = useState(null);
   const [gradeError, setGradeError] = useState(null);
   const reportRef = useRef(null);
-
-  // ── Fathom sync ─────────────────────────────────────────────────────────────
-  const handleFathomSync = async () => {
-    setSyncError(null); setRecordings([]); setSelectedRec(null);
-    setSyncing(true); setSyncStatus("Fetching meetings from Fathom…");
-
-    try {
-      // Step 1: List meetings
-      const data = await fathomGet("/meetings?limit=100");
-      const meetings = data.meetings || data.data || (Array.isArray(data) ? data : []);
-      setSyncStatus(`Found ${meetings.length} meetings. Matching JW tutors…`);
-
-      // Step 2: Filter to meetings where a JW tutor is a participant
-      const matched = [];
-      for (const m of meetings) {
-        const participants = m.participants || m.attendees || [];
-        const participantNames = participants.map(p =>
-          typeof p === "string" ? p : (p.display_name || p.name || p.email || "")
-        );
-
-        // Check every participant name against JW roster
-        let tutorMatch = null;
-        for (const pName of participantNames) {
-          tutorMatch = matchTutor(pName);
-          if (tutorMatch) break;
-        }
-        // Also check the meeting title / host
-        if (!tutorMatch && m.title) tutorMatch = matchTutor(m.title);
-        if (!tutorMatch && m.host) tutorMatch = matchTutor(typeof m.host === "object" ? (m.host.name || m.host.display_name) : m.host);
-
-        if (!tutorMatch) continue;
-
-        const recId = m.recording?.id || m.id;
-        const recDate = m.started_at || m.created_at || m.date || m.scheduled_at || "";
-        const otherParticipants = participantNames.filter(n => !matchTutor(n) && n);
-
-        matched.push({
-          id: recId,
-          title: m.title || m.name || "",
-          date: recDate,
-          matchedTutor: tutorMatch,
-          participants: otherParticipants,
-          transcript: null, // loaded lazily below
-          rawMeeting: m,
-        });
-      }
-
-      setSyncStatus(`Matched ${matched.length} JW tutor sessions. Fetching transcripts…`);
-
-      // Step 3: Fetch transcripts for all matched recordings (in parallel, batched)
-      const withTranscripts = [...matched];
-      const BATCH = 5;
-      for (let i = 0; i < matched.length; i += BATCH) {
-        const batch = matched.slice(i, i + BATCH);
-        await Promise.all(batch.map(async (rec, bi) => {
-          try {
-            const tData = await fathomGet(`/recordings/${rec.id}/transcript`);
-            withTranscripts[i + bi].transcript = formatTranscript(tData);
-          } catch (e) {
-            withTranscripts[i + bi].transcript = null;
-            withTranscripts[i + bi].transcriptError = e.message;
-          }
-        }));
-        const done = Math.min(i + BATCH, matched.length);
-        setSyncStatus(`Fetched ${done}/${matched.length} transcripts…`);
-        setRecordings([...withTranscripts]);
-      }
-
-      // Sort by date descending
-      withTranscripts.sort((a, b) => new Date(b.date) - new Date(a.date));
-      setRecordings(withTranscripts);
-
-      const withT = withTranscripts.filter(r => r.transcript).length;
-      setSyncStatus(`Done — ${matched.length} sessions, ${withT} with transcripts`);
-    } catch (e) {
-      setSyncError(e.message);
-    } finally {
-      setSyncing(false);
-    }
-  };
-
-  const handleSelectRecording = (rec) => {
-    setSelectedRec(rec);
-    setReport(null); setEmails(null); setScore(null); setRating(null); setManagementEmailSent(null); setManagementEmailError(null);
-    const student = rec.participants?.[0] || "";
-    const sessionDateStr = rec.date ? rec.date.split("T")[0] : new Date().toISOString().split("T")[0];
-    setForm(f => ({
-      ...f,
-      tutorName: rec.matchedTutor?.name || f.tutorName,
-      tutorEmail: rec.matchedTutor?.email || f.tutorEmail,
-      studentName: student,
-      sessionDate: sessionDateStr,
-      transcript: rec.transcript || f.transcript,
-    }));
-  };
 
   // ── Claude calls (via server proxy so API key stays server-side) ─────────────
   const callClaude = async (system, msg) => {
@@ -687,22 +463,51 @@ export default function CARSGrader() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ subject: parsed.managementEmail.subject, body: parsed.managementEmail.body }),
           });
-          const sendData = await sendRes.json();
-          setManagementEmailSent(sendData.success);
-          setManagementEmailError(sendData.success ? null : (sendData.error || "Send failed"));
+          let sendData;
+          try {
+            sendData = await sendRes.json();
+          } catch {
+            setManagementEmailSent(false);
+            setManagementEmailError(sendRes.status ? `${sendRes.status} ${sendRes.statusText} — invalid response` : "Invalid response from server");
+            sendData = null;
+          }
+          if (sendData) {
+            setManagementEmailSent(sendData.success === true);
+            setManagementEmailError(sendData.success ? null : (sendData.error || "Send failed"));
+          }
         } catch (e) {
           setManagementEmailSent(false);
-          setManagementEmailError(e.message || "Request failed");
+          setManagementEmailError(e.message || "Network error — check Vercel logs for /api/send-email");
         }
       }
+      // Store transcript + grading outcome for 3-day director digest
+      try {
+        await fetch("/api/record-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            tutor_name: form.tutorName || null,
+            tutor_email: form.tutorEmail || null,
+            student_name: form.studentName || null,
+            session_date: form.sessionDate || null,
+            session_number: form.sessionNumber || null,
+            course_type: form.courseType || null,
+            score: ps ?? null,
+            rating: pr || null,
+            report_text: gradeText || null,
+            transcript_text: form.transcript || null,
+            fathom_notes: form.fathomNotes || null,
+            host_data: null,
+          }),
+        });
+      } catch (_) { /* optional: session still recorded when Supabase is configured */ }
       setTimeout(() => reportRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
     } catch (e) { setGradeError(e.message); }
     finally { setLoading(false); }
   };
 
-  const withTranscriptCount = recordings.filter(r => r.transcript).length;
-
-  const GradeForm = ({ showTranscriptBadge }) => (
+  // Inline form content (not a nested component) so inputs don't remount and lose focus on each keystroke
+  const renderFormContent = () => (
     <>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
         {[{ k: "studentName", l: "Student Name", t: "text", ph: "e.g. Jordan Kim" },
@@ -736,13 +541,7 @@ export default function CARSGrader() {
 
       {/* Transcript */}
       <div style={{ marginBottom: 16 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-          <label style={{ fontSize: 12, fontWeight: 600, color: "#2B2F40" }}>Session Transcript <span style={{ color: "#dc2626" }}>*</span></label>
-          {showTranscriptBadge && selectedRec?.transcript &&
-            <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 8, background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0" }}>✓ Auto-loaded from Fathom</span>}
-          {showTranscriptBadge && !selectedRec?.transcript &&
-            <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 8, background: "#fffbeb", color: "#d97706", border: "1px solid #fde68a" }}>No Fathom transcript — paste manually</span>}
-        </div>
+        <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#2B2F40", marginBottom: 6 }}>Session Transcript <span style={{ color: "#dc2626" }}>*</span></label>
         <textarea rows={7} placeholder="Paste the full session transcript here…" value={form.transcript} onChange={set("transcript")} style={{ ...inputBase, resize: "vertical", lineHeight: 1.6 }} />
       </div>
 
@@ -790,9 +589,6 @@ export default function CARSGrader() {
         textarea { font-family: 'Inter', sans-serif; }
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-        .rlist { max-height: 420px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
-        .rlist::-webkit-scrollbar { width: 4px; }
-        .rlist::-webkit-scrollbar-thumb { background: #E5E7EB; border-radius: 2px; }
       `}</style>
 
       <div style={{ minHeight: "100vh", background: "#fff", fontFamily: "'Inter', sans-serif", paddingBottom: 80 }}>
@@ -816,78 +612,15 @@ export default function CARSGrader() {
             <p style={{ fontSize: 12, fontWeight: 600, letterSpacing: "0.08em", color: "#5E6573", textTransform: "uppercase", marginBottom: 12 }}>515+ · Intensive · CARS</p>
             <h1 style={{ fontSize: "clamp(26px, 4vw, 38px)", fontWeight: 700, color: "#2B2F40", lineHeight: 1.2, letterSpacing: "-0.02em", marginBottom: 12 }}>Session grading, powered by AI.</h1>
             <p style={{ fontSize: 15, color: "#5E6573", lineHeight: 1.7, maxWidth: 560 }}>
-              Grade 515+, Intensive, or CARS sessions. Sync with Fathom or paste transcript and notes.
+              Grade 515+, Intensive, or CARS sessions. Paste transcript and student notes to grade and send the management email to directors.
             </p>
           </div>
 
-          {/* Tabs */}
-          <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
-            {[["fathom", "Sync from Fathom"], ["manual", "Manual entry"]].map(([t, l]) => (
-              <button key={t} onClick={() => setTab(t)} style={{ padding: "10px 20px", borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: "pointer", border: tab === t ? "none" : "1.5px solid #E5E7EB", background: tab === t ? "linear-gradient(135deg, #8A5CF6 0%, #B88AFF 100%)" : "#fff", color: tab === t ? "#fff" : "#5E6573", boxShadow: tab === t ? "0 2px 12px rgba(138,92,246,0.3)" : "none", transition: "all 0.15s" }}>
-                {l}
-              </button>
-            ))}
+          {/* Session form */}
+          <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #E5E7EB", padding: "24px 24px 20px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", animation: "fadeUp 0.2s ease" }}>
+            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#5E6573", marginBottom: 16 }}>Session details</p>
+            {renderFormContent()}
           </div>
-
-          {/* ── FATHOM TAB ── */}
-          {tab === "fathom" && (
-            <div style={{ animation: "fadeUp 0.2s ease" }}>
-
-              {/* Sync card */}
-              <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #E5E7EB", padding: "22px 24px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", marginBottom: 14 }}>
-                <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#5E6573", marginBottom: 14 }}>Fathom sync</p>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-                  <p style={{ fontSize: 13, color: "#5E6573", lineHeight: 1.5 }}>
-                    Pulls all recent meetings from Fathom and matches sessions where a JW tutor is a participant.
-                    <br/><span style={{ fontSize: 11, color: "#5E6573" }}>API key configured via <code style={{ background: "#F9FAFB", padding: "2px 6px", borderRadius: 6, fontSize: 11, border: "1px solid #E5E7EB" }}>FATHOM_API_KEY</code> environment variable.</span>
-                  </p>
-                  <button onClick={handleFathomSync} disabled={syncing} style={{ padding: "12px 24px", background: syncing ? "#B88AFF" : "linear-gradient(135deg, #8A5CF6 0%, #B88AFF 100%)", color: "#fff", border: "none", borderRadius: 12, fontSize: 13, fontWeight: 700, cursor: syncing ? "not-allowed" : "pointer", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 8, boxShadow: syncing ? "none" : "0 2px 12px rgba(138,92,246,0.35)", transition: "all 0.15s", flexShrink: 0 }}>
-                    {syncing
-                      ? <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2.5" style={{ animation: "spin 0.8s linear infinite" }}><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" /></svg>Syncing…</>
-                      : "↻ Sync Fathom"}
-                  </button>
-                </div>
-                {syncError && <div style={{ marginTop: 12, background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "10px 14px", color: "#dc2626", fontSize: 13 }}>{syncError}</div>}
-                {syncStatus && <p style={{ fontSize: 12, color: "#5E6573", marginTop: 10 }}>{syncStatus}</p>}
-                {recordings.length > 0 && (
-                  <div style={{ marginTop: 12, display: "flex", gap: 16, flexWrap: "wrap" }}>
-                    <span style={{ fontSize: 11, display: "flex", alignItems: "center", gap: 5, color: "#16a34a" }}><span style={{ width: 8, height: 8, borderRadius: "50%", background: "#16a34a", display: "inline-block" }} />Transcript ready ({withTranscriptCount})</span>
-                    <span style={{ fontSize: 11, display: "flex", alignItems: "center", gap: 5, color: "#d97706" }}><span style={{ width: 8, height: 8, borderRadius: "50%", background: "#f59e0b", display: "inline-block" }} />No transcript ({recordings.length - withTranscriptCount})</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Recordings list */}
-              {recordings.length > 0 && (
-                <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #E5E7EB", padding: "18px 18px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", marginBottom: 14 }}>
-                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#5E6573", marginBottom: 12 }}>
-                    {recordings.length} JW tutor sessions found — select one to grade
-                  </p>
-                  <div className="rlist">
-                    {recordings.map((r, i) => (
-                      <RecordingCard key={i} rec={r} selected={selectedRec === r} onSelect={handleSelectRecording} />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Grade form — shown when a recording is selected */}
-              {selectedRec && (
-                <div style={{ background: "#fff", borderRadius: 12, border: "2px solid #8A5CF6", padding: "22px 24px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", animation: "fadeUp 0.2s ease" }}>
-                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#8A5CF6", marginBottom: 16 }}>Grade selected session</p>
-                  <GradeForm showTranscriptBadge={true} />
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── MANUAL TAB ── */}
-          {tab === "manual" && (
-            <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #E5E7EB", padding: "24px 24px 20px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", animation: "fadeUp 0.2s ease" }}>
-              <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#5E6573", marginBottom: 16 }}>Session details</p>
-              <GradeForm showTranscriptBadge={false} />
-            </div>
-          )}
 
           {/* ── RESULTS ── */}
           {report && (
@@ -919,8 +652,12 @@ export default function CARSGrader() {
                     {managementEmailSent === true && (
                       <p style={{ fontSize: 12, color: "#16a34a", fontWeight: 600, marginTop: 6 }}>✓ Management email sent to directors</p>
                     )}
-                    {managementEmailSent === false && managementEmailError && (
-                      <p style={{ fontSize: 12, color: "#dc2626", marginTop: 6 }}>Could not send to directors: {managementEmailError}</p>
+                    {managementEmailSent === false && (
+                      <div style={{ marginTop: 8, padding: "12px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8 }}>
+                        <p style={{ fontSize: 13, color: "#dc2626", fontWeight: 600, marginBottom: 4 }}>Email not sent</p>
+                        <p style={{ fontSize: 12, color: "#b91c1c", marginBottom: 6 }}>{managementEmailError || "Unknown error"}</p>
+                        <p style={{ fontSize: 11, color: "#7f1d1d" }}>Check Vercel → Project → Logs (filter by /api/send-email) for details. Confirm SMTP_SERVER (hostname), FROM_EMAIL, SMTP_PASSWORD, and DIRECTOR_EMAIL or DIRECTOR_EMAILS are set in Vercel Environment Variables, then redeploy.</p>
+                      </div>
                     )}
                   </div>
                 </div>
