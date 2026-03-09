@@ -409,6 +409,125 @@ export default function CARSGrader() {
   const [gradeError, setGradeError] = useState(null);
   const reportRef = useRef(null);
 
+  // Build a styled HTML email from the management summary + full grading report
+  const buildHtmlEmail = (summaryText, reportText, sessionMeta) => {
+    const esc = (s) => (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+    const renderReport = (text) => {
+      const lines = (text || "").split("\n");
+      const parts = [];
+      let i = 0;
+      while (i < lines.length) {
+        const line = lines[i];
+        if (line.startsWith("## ")) {
+          parts.push(`<h2 style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#8A5CF6;border-bottom:1px solid #EDE9FE;padding-bottom:8px;margin:28px 0 12px">${esc(line.replace("## ", ""))}</h2>`);
+        } else if (line.startsWith("### ")) {
+          parts.push(`<h3 style="font-size:15px;font-weight:600;color:#2B2F40;margin:18px 0 6px">${esc(line.replace("### ", ""))}</h3>`);
+        } else if (line.startsWith("| ")) {
+          const tLines = [];
+          while (i < lines.length && lines[i].startsWith("|")) { tLines.push(lines[i]); i++; }
+          const rows = tLines.filter(l => !/^\|[-:\s|]+\|$/.test(l));
+          let table = '<table style="width:100%;border-collapse:collapse;font-size:13px;border:1px solid #E5E7EB;border-radius:8px;margin:12px 0">';
+          rows.forEach((row, ri) => {
+            const cells = row.split("|").slice(1, -1);
+            const isH = ri === 0;
+            table += '<tr style="border-bottom:1px solid #E5E7EB">';
+            cells.forEach(cell => {
+              const clean = esc(cell.trim().replace(/\*\*/g, ""));
+              table += isH
+                ? `<th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#5E6573;background:#F9FAFB;border-bottom:2px solid #EDE9FE">${clean}</th>`
+                : `<td style="padding:8px 12px;color:#2B2F40;background:${ri % 2 === 0 ? "#fff" : "#FAFAFF"}">${clean}</td>`;
+            });
+            table += "</tr>";
+          });
+          table += "</table>";
+          parts.push(table);
+          continue;
+        } else if (/^\d+\.\s/.test(line)) {
+          const content = esc(line.replace(/^\d+\.\s/, "")).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+          const num = line.match(/^(\d+)\./)[1];
+          parts.push(`<p style="margin:4px 0;color:#5E6573;font-size:13px;line-height:1.65"><span style="color:#8A5CF6;font-weight:700;margin-right:8px">${num}.</span>${content}</p>`);
+        } else if (line.startsWith("- ")) {
+          const content = esc(line.replace(/^-\s/, "")).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+          parts.push(`<p style="margin:3px 0;color:#5E6573;font-size:13px;line-height:1.65"><span style="color:#8A5CF6;margin-right:8px">●</span>${content}</p>`);
+        } else if (line.startsWith("**") && line.endsWith("**")) {
+          parts.push(`<p style="font-weight:700;color:#2B2F40;margin:10px 0 4px;font-size:13px">${esc(line.replace(/\*\*/g, ""))}</p>`);
+        } else if (line === "---") {
+          parts.push('<hr style="border:none;border-top:1px solid #E5E7EB;margin:20px 0">');
+        } else if (!line.trim()) {
+          parts.push('<div style="height:6px"></div>');
+        } else {
+          const content = esc(line).replace(/\*\*([^*]+)\*\*/g, "<strong style='color:#2B2F40'>$1</strong>");
+          parts.push(`<p style="color:#5E6573;font-size:13px;line-height:1.7;margin:3px 0">${content}</p>`);
+        }
+        i++;
+      }
+      return parts.join("\n");
+    };
+
+    const scoreColor = sessionMeta.score >= 90 ? "#16a34a" : sessionMeta.score >= 75 ? "#8A5CF6" : sessionMeta.score >= 60 ? "#d97706" : "#dc2626";
+    const ratingColors = {
+      "Exceeds Expectations":    { bg: "#f0fdf4", color: "#16a34a", border: "#bbf7d0" },
+      "Meets Expectations":      { bg: "#eff6ff", color: "#2563eb", border: "#bfdbfe" },
+      "Needs Minor Calibration": { bg: "#fffbeb", color: "#d97706", border: "#fde68a" },
+      "Needs Remediation":       { bg: "#fef2f2", color: "#dc2626", border: "#fecaca" },
+    };
+    const rc = ratingColors[sessionMeta.rating] || ratingColors["Meets Expectations"];
+
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif">
+<div style="max-width:680px;margin:0 auto;padding:24px 16px">
+
+<!-- Header -->
+<div style="background:linear-gradient(135deg,#8A5CF6 0%,#B88AFF 100%);border-radius:14px 14px 0 0;padding:24px 28px;text-align:center">
+  <div style="display:inline-block;background:rgba(255,255,255,0.2);border-radius:8px;padding:4px 12px;margin-bottom:10px">
+    <span style="color:#fff;font-size:12px;font-weight:800;letter-spacing:0.1em">JW SESSION GRADER</span>
+  </div>
+  <h1 style="color:#fff;font-size:20px;font-weight:700;margin:8px 0 4px">Session Grading Report</h1>
+  <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:0">${esc(sessionMeta.tutorName)} · ${esc(sessionMeta.studentName)} · Session ${esc(sessionMeta.sessionNumber)} · ${esc(sessionMeta.sessionDate)}</p>
+</div>
+
+<!-- Score card -->
+<div style="background:#fff;border:1px solid #E5E7EB;border-top:none;padding:24px 28px;display:flex">
+  <table style="width:100%"><tr>
+    <td style="width:100px;text-align:center;vertical-align:middle">
+      <div style="display:inline-block;width:80px;height:80px;border-radius:50%;border:6px solid ${scoreColor};text-align:center;line-height:68px">
+        <span style="font-size:24px;font-weight:800;color:#2B2F40">${sessionMeta.score != null ? sessionMeta.score : "—"}</span><span style="font-size:11px;color:#5E6573">/100</span>
+      </div>
+    </td>
+    <td style="vertical-align:middle;padding-left:18px">
+      ${sessionMeta.rating ? `<span style="display:inline-block;padding:5px 14px;border-radius:20px;background:${rc.bg};color:${rc.color};border:1px solid ${rc.border};font-size:12px;font-weight:700;margin-bottom:8px">${esc(sessionMeta.rating)}</span><br>` : ""}
+      <span style="font-size:12px;color:#5E6573">${esc(sessionMeta.courseType)} · ${esc(sessionMeta.tutorEmail || "")}</span>
+    </td>
+  </tr></table>
+</div>
+
+<!-- Management summary -->
+<div style="background:#fff;border:1px solid #E5E7EB;border-top:none;padding:24px 28px">
+  <h2 style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#f59e0b;margin:0 0 14px;border-bottom:1px solid #fde68a;padding-bottom:8px">Management Summary</h2>
+  ${summaryText.split("\n").map(l => `<p style="color:#5E6573;font-size:13px;line-height:1.7;margin:4px 0">${esc(l)}</p>`).join("\n")}
+</div>
+
+<!-- Full grading report -->
+<div style="background:#fff;border:1px solid #E5E7EB;border-top:none;border-radius:0 0 14px 14px;padding:24px 28px">
+  <h2 style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#8A5CF6;margin:0 0 14px;border-bottom:1px solid #EDE9FE;padding-bottom:8px">Full Grading Report</h2>
+  ${renderReport(reportText)}
+</div>
+
+<!-- Score bands legend -->
+<div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:10px;padding:14px 18px;margin-top:12px;text-align:center">
+  <span style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#5E6573">Score bands: </span>
+  <span style="padding:3px 8px;border-radius:6px;background:#f0fdf4;border:1px solid #bbf7d0;font-size:11px;color:#16a34a;font-weight:600">90–100 Exceeds</span>
+  <span style="padding:3px 8px;border-radius:6px;background:#eff6ff;border:1px solid #bfdbfe;font-size:11px;color:#2563eb;font-weight:600;margin-left:4px">75–89 Meets</span>
+  <span style="padding:3px 8px;border-radius:6px;background:#fffbeb;border:1px solid #fde68a;font-size:11px;color:#d97706;font-weight:600;margin-left:4px">60–74 Coach</span>
+  <span style="padding:3px 8px;border-radius:6px;background:#fef2f2;border:1px solid #fecaca;font-size:11px;color:#dc2626;font-weight:600;margin-left:4px">&lt;60 Remediate</span>
+</div>
+
+<p style="text-align:center;font-size:11px;color:#9CA3AF;margin-top:18px">Sent by JW Session Grader · Internal QA Tool</p>
+</div>
+</body></html>`;
+  };
+
   // ── Claude calls (via server proxy so API key stays server-side) ─────────────
   const callClaude = async (system, msg) => {
     const res = await fetch("/api/claude", {
@@ -457,11 +576,24 @@ export default function CARSGrader() {
         setEmails(parsed);
       }
       if (parsed?.managementEmail?.subject && parsed?.managementEmail?.body) {
+        const fullBody = parsed.managementEmail.body
+          + "\n\n────────────────────────────────────────\nFULL GRADING REPORT\n────────────────────────────────────────\n\n"
+          + gradeText;
+        const htmlEmail = buildHtmlEmail(parsed.managementEmail.body, gradeText, {
+          tutorName: form.tutorName || "—",
+          tutorEmail: form.tutorEmail || "",
+          studentName: form.studentName || "—",
+          sessionNumber: form.sessionNumber || "—",
+          sessionDate: form.sessionDate || "—",
+          courseType: form.courseType === "515" ? "515+ Course" : form.courseType === "intensive" ? "Intensive" : "CARS Strategy",
+          score: ps,
+          rating: pr,
+        });
         try {
           const sendRes = await fetch("/api/send-email", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ subject: parsed.managementEmail.subject, body: parsed.managementEmail.body }),
+            body: JSON.stringify({ subject: parsed.managementEmail.subject, body: fullBody, html: htmlEmail }),
           });
           let sendData;
           try {

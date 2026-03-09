@@ -31,17 +31,19 @@ def get_director_emails():
     return [e.strip() for e in raw.split(",") if e.strip()]
 
 
-def send_email(to_emails, subject, body):
+def send_email(to_emails, subject, body, html=None):
     if not SMTP_USER or not SMTP_PASSWORD:
         return False, "SMTP not configured"
     if not to_emails:
         return False, "No recipients"
     try:
-        msg = MIMEMultipart()
+        msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
         msg["From"] = FROM_EMAIL
         msg["To"] = ", ".join(to_emails)
         msg.attach(MIMEText(body, "plain", "utf-8"))
+        if html:
+            msg.attach(MIMEText(html, "html", "utf-8"))
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
             server.starttls()
             server.login(SMTP_USER, SMTP_PASSWORD)
@@ -92,11 +94,12 @@ class handler(BaseHTTPRequestHandler):
             return
         subject = data.get("subject", "").strip()
         body = data.get("body", "").strip()
+        html = data.get("html", "").strip() or None
         if not subject or not body:
             self._json(400, {"success": False, "error": "subject and body required"})
             return
         to_emails = get_director_emails()
-        ok, err = send_email(to_emails, subject, body)
+        ok, err = send_email(to_emails, subject, body, html=html)
         if ok:
             self._json(200, {"success": True, "sent_to": to_emails})
         else:
