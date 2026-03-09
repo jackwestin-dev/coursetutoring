@@ -72,11 +72,14 @@ class handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        """Diagnostic: check if SMTP and recipients are configured (no secrets)."""
+        """Diagnostic: check if SMTP and recipients are configured."""
         to_emails = get_director_emails()
         smtp_ok = bool(SMTP_USER and SMTP_PASSWORD)
         self._json(200, {
             "smtp_configured": smtp_ok,
+            "smtp_server": SMTP_SERVER,
+            "from_email": FROM_EMAIL,
+            "recipients": to_emails,
             "recipients_count": len(to_emails),
             "hint": "Set SMTP_SERVER (hostname), SMTP_PORT (587), FROM_EMAIL, SMTP_PASSWORD, and DIRECTOR_EMAIL or DIRECTOR_EMAILS in Vercel." if not smtp_ok else None,
         })

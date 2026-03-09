@@ -29,7 +29,7 @@
     }
   ],
   "crons": [
-    { "path": "/api/director-digest", "schedule": "0 14 * * *" }
+    { "path": "/api/director-digest", "schedule": "0 14 */3 * *" }
   ],
   "routes": [
     { "src": "/api/grade", "dest": "/api/grade.py" },
