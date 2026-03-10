@@ -276,17 +276,42 @@ SCORE BAND GUIDE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Then 3-5 sentence management summary. Then divider + full tutor email draft. Sign: "JW QA System — automated report"`;
 
+// ─── Report line classification (bold headers + indent) ────────────────────────
+function isReportMainSection(line) {
+  const t = (line || "").trim().replace(/\*\*/g, "");
+  return /^Top 3 Fixes/i.test(t) || /^CATEGORY SCORES/i.test(t) || /^S\.?O\.?P\.?\s*CHECKLIST/i.test(t) || /^COACHING QUALITY/i.test(t) || /^TUTOR FEEDBACK/i.test(t) || /^FINAL SCORE/i.test(t);
+}
+function isReportCategoryLine(line) {
+  return /^[A-E]\.\s+.+[—\-].*\d+\/\d+\s*pts/i.test((line || "").trim());
+}
+function isReportSubsection(line) {
+  const t = (line || "").trim().replace(/\*\*/g, "");
+  return /^What Went Well/i.test(t) || /^Areas for Improvement/i.test(t);
+}
+
 // ─── UI helpers ───────────────────────────────────────────────────────────────
 function ReportRenderer({ text }) {
   const lines = text.split("\n");
   const out = [];
   let i = 0;
+  const sectionStyle = { fontSize: 13, fontWeight: 700, color: "#2B2F40", marginTop: 24, marginBottom: 10 };
+  const categoryStyle = { fontSize: 13, fontWeight: 700, color: "#2B2F40", marginTop: 14, marginBottom: 6, paddingLeft: 16 };
+  const subsectionStyle = { fontSize: 13, fontWeight: 700, color: "#2B2F40", marginTop: 12, marginBottom: 6, paddingLeft: 12 };
+  const bodyStyle = { color: "#5E6573", fontSize: 13, lineHeight: 1.7, margin: "6px 0", paddingLeft: 12 };
   while (i < lines.length) {
     const line = lines[i];
     if (line.startsWith("## ")) {
       out.push(<h2 key={i} style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#8A5CF6", borderBottom: "1px solid #EDE9FE", paddingBottom: 8, marginTop: 32, marginBottom: 14 }}>{line.replace("## ", "")}</h2>);
     } else if (line.startsWith("### ")) {
       out.push(<h3 key={i} style={{ fontSize: 14, fontWeight: 600, color: "#2B2F40", marginTop: 20, marginBottom: 6 }}>{line.replace("### ", "")}</h3>);
+    } else if (isReportMainSection(line)) {
+      const clean = line.replace(/\*\*/g, "").trim();
+      out.push(<p key={i} style={sectionStyle}>{clean}</p>);
+    } else if (isReportCategoryLine(line)) {
+      out.push(<p key={i} style={categoryStyle} dangerouslySetInnerHTML={{ __html: line.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>") }} />);
+    } else if (isReportSubsection(line)) {
+      const clean = line.replace(/\*\*/g, "").trim();
+      out.push(<p key={i} style={subsectionStyle}>{clean}</p>);
     } else if (line.startsWith("| ")) {
       const tLines = [];
       while (i < lines.length && lines[i].startsWith("|")) { tLines.push(lines[i]); i++; }
@@ -311,17 +336,17 @@ function ReportRenderer({ text }) {
       );
       continue;
     } else if (/^\d+\.\s/.test(line)) {
-      out.push(<div key={i} style={{ display: "flex", gap: 10, margin: "4px 0", alignItems: "flex-start" }}><span style={{ color: "#8A5CF6", fontWeight: 700, fontSize: 13, minWidth: 20 }}>{line.match(/^(\d+)\./)[1]}.</span><span style={{ color: "#5E6573", fontSize: 13, lineHeight: 1.65 }} dangerouslySetInnerHTML={{ __html: line.replace(/^\d+\.\s/, "").replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>") }} /></div>);
+      out.push(<div key={i} style={{ display: "flex", gap: 10, margin: "8px 0", paddingLeft: 12, alignItems: "flex-start" }}><span style={{ color: "#8A5CF6", fontWeight: 700, fontSize: 13, minWidth: 20 }}>{line.match(/^(\d+)\./)[1]}.</span><span style={{ color: "#5E6573", fontSize: 13, lineHeight: 1.65 }} dangerouslySetInnerHTML={{ __html: line.replace(/^\d+\.\s/, "").replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>") }} /></div>);
     } else if (line.startsWith("- ")) {
-      out.push(<div key={i} style={{ display: "flex", gap: 9, margin: "3px 0", alignItems: "flex-start" }}><span style={{ color: "#8A5CF6", fontSize: 8, marginTop: 6, flexShrink: 0 }}>●</span><span style={{ color: "#5E6573", fontSize: 13, lineHeight: 1.65 }} dangerouslySetInnerHTML={{ __html: line.replace(/^-\s/, "").replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>") }} /></div>);
+      out.push(<div key={i} style={{ display: "flex", gap: 9, margin: "6px 0", paddingLeft: 12, alignItems: "flex-start" }}><span style={{ color: "#8A5CF6", fontSize: 8, marginTop: 6, flexShrink: 0 }}>●</span><span style={{ color: "#5E6573", fontSize: 13, lineHeight: 1.65 }} dangerouslySetInnerHTML={{ __html: line.replace(/^-\s/, "").replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>") }} /></div>);
     } else if (line.startsWith("**") && line.endsWith("**")) {
-      out.push(<p key={i} style={{ fontWeight: 700, color: "#2B2F40", margin: "10px 0 4px", fontSize: 13 }}>{line.replace(/\*\*/g, "")}</p>);
+      out.push(<p key={i} style={{ fontWeight: 700, color: "#2B2F40", margin: "12px 0 6px", paddingLeft: 12, fontSize: 13 }}>{line.replace(/\*\*/g, "")}</p>);
     } else if (line === "---") {
       out.push(<hr key={i} style={{ border: "none", borderTop: "1px solid #E5E7EB", margin: "24px 0" }} />);
     } else if (!line.trim()) {
-      out.push(<div key={i} style={{ height: 4 }} />);
+      out.push(<div key={i} style={{ height: 8 }} />);
     } else {
-      out.push(<p key={i} style={{ color: "#5E6573", fontSize: 13, lineHeight: 1.7, margin: "3px 0" }} dangerouslySetInnerHTML={{ __html: line.replace(/\*\*([^*]+)\*\*/g, "<strong style='color:#2B2F40'>$1</strong>") }} />);
+      out.push(<p key={i} style={bodyStyle} dangerouslySetInnerHTML={{ __html: line.replace(/\*\*([^*]+)\*\*/g, "<strong style='color:#2B2F40'>$1</strong>") }} />);
     }
     i++;
   }
@@ -357,7 +382,7 @@ function ScoreRing({ score }) {
   );
 }
 
-function EmailPanel({ title, subtitle, tagColor, subject, body }) {
+function EmailPanel({ title, subtitle, tagColor, subject, body, formatBody }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   return (
@@ -375,7 +400,13 @@ function EmailPanel({ title, subtitle, tagColor, subject, body }) {
           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#5E6573", marginBottom: 4 }}>Subject</div>
           <div style={{ fontSize: 13, color: "#2B2F40", fontWeight: 500, marginBottom: 12 }}>{subject}</div>
           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#5E6573", marginBottom: 4 }}>Body</div>
-          <pre style={{ fontSize: 12, color: "#5E6573", lineHeight: 1.7, whiteSpace: "pre-wrap", wordBreak: "break-word", background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: 10, padding: "12px 14px", fontFamily: "inherit", maxHeight: 300, overflowY: "auto", marginBottom: 10 }}>{body}</pre>
+          {formatBody && body ? (
+            <div style={{ background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: 10, padding: "12px 14px", maxHeight: 400, overflowY: "auto", marginBottom: 10 }}>
+              <ReportRenderer text={body} />
+            </div>
+          ) : (
+            <pre style={{ fontSize: 12, color: "#5E6573", lineHeight: 1.7, whiteSpace: "pre-wrap", wordBreak: "break-word", background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: 10, padding: "12px 14px", fontFamily: "inherit", maxHeight: 300, overflowY: "auto", marginBottom: 10 }}>{body}</pre>
+          )}
           <button onClick={() => { navigator.clipboard.writeText(`Subject: ${subject}\n\n${body}`); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
             style={{ padding: "8px 16px", background: copied ? "#8A5CF6" : "#fff", border: "1.5px solid #8A5CF6", borderRadius: 10, color: copied ? "#fff" : "#8A5CF6", fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.15s" }}>
             {copied ? "Copied!" : "Copy email"}
@@ -423,6 +454,15 @@ export default function CARSGrader() {
           parts.push(`<h2 style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#8A5CF6;border-bottom:1px solid #EDE9FE;padding-bottom:8px;margin:28px 0 12px">${esc(line.replace("## ", ""))}</h2>`);
         } else if (line.startsWith("### ")) {
           parts.push(`<h3 style="font-size:15px;font-weight:600;color:#2B2F40;margin:18px 0 6px">${esc(line.replace("### ", ""))}</h3>`);
+        } else if (isReportMainSection(line)) {
+          const clean = esc(line.replace(/\*\*/g, "").trim());
+          parts.push(`<p style="font-size:13px;font-weight:700;color:#2B2F40;margin-top:24px;margin-bottom:10px">${clean}</p>`);
+        } else if (isReportCategoryLine(line)) {
+          const content = esc(line).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+          parts.push(`<p style="font-size:13px;font-weight:700;color:#2B2F40;margin-top:14px;margin-bottom:6px;padding-left:16px">${content}</p>`);
+        } else if (isReportSubsection(line)) {
+          const clean = esc(line.replace(/\*\*/g, "").trim());
+          parts.push(`<p style="font-size:13px;font-weight:700;color:#2B2F40;margin-top:12px;margin-bottom:6px;padding-left:12px">${clean}</p>`);
         } else if (line.startsWith("| ")) {
           const tLines = [];
           while (i < lines.length && lines[i].startsWith("|")) { tLines.push(lines[i]); i++; }
@@ -446,19 +486,19 @@ export default function CARSGrader() {
         } else if (/^\d+\.\s/.test(line)) {
           const content = esc(line.replace(/^\d+\.\s/, "")).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
           const num = line.match(/^(\d+)\./)[1];
-          parts.push(`<p style="margin:4px 0;color:#5E6573;font-size:13px;line-height:1.65"><span style="color:#8A5CF6;font-weight:700;margin-right:8px">${num}.</span>${content}</p>`);
+          parts.push(`<p style="margin:8px 0;padding-left:12px;color:#5E6573;font-size:13px;line-height:1.65"><span style="color:#8A5CF6;font-weight:700;margin-right:8px">${num}.</span>${content}</p>`);
         } else if (line.startsWith("- ")) {
           const content = esc(line.replace(/^-\s/, "")).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-          parts.push(`<p style="margin:3px 0;color:#5E6573;font-size:13px;line-height:1.65"><span style="color:#8A5CF6;margin-right:8px">●</span>${content}</p>`);
+          parts.push(`<p style="margin:6px 0;padding-left:12px;color:#5E6573;font-size:13px;line-height:1.65"><span style="color:#8A5CF6;margin-right:8px">●</span>${content}</p>`);
         } else if (line.startsWith("**") && line.endsWith("**")) {
-          parts.push(`<p style="font-weight:700;color:#2B2F40;margin:10px 0 4px;font-size:13px">${esc(line.replace(/\*\*/g, ""))}</p>`);
+          parts.push(`<p style="font-weight:700;color:#2B2F40;margin:12px 0 6px;padding-left:12px;font-size:13px">${esc(line.replace(/\*\*/g, ""))}</p>`);
         } else if (line === "---") {
           parts.push('<hr style="border:none;border-top:1px solid #E5E7EB;margin:20px 0">');
         } else if (!line.trim()) {
-          parts.push('<div style="height:6px"></div>');
+          parts.push('<div style="height:8px"></div>');
         } else {
           const content = esc(line).replace(/\*\*([^*]+)\*\*/g, "<strong style='color:#2B2F40'>$1</strong>");
-          parts.push(`<p style="color:#5E6573;font-size:13px;line-height:1.7;margin:3px 0">${content}</p>`);
+          parts.push(`<p style="color:#5E6573;font-size:13px;line-height:1.7;margin:6px 0;padding-left:12px">${content}</p>`);
         }
         i++;
       }
@@ -780,10 +820,17 @@ export default function CARSGrader() {
                 ))}
               </div>
 
+              {/* Full grading report — first */}
+              <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#5E6573", marginBottom: 8 }}>Full grading report</p>
+              <div style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: "26px 26px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", marginBottom: 16 }}>
+                <ReportRenderer text={report} />
+              </div>
+
+              {/* Email drafts — tutor first, then management (draft tutor email below full report) */}
               {emails && (
                 <div style={{ marginBottom: 10 }}>
                   <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#5E6573", marginBottom: 8 }}>Email drafts</p>
-                  <EmailPanel title="Tutor Feedback Email" subtitle={`To: ${form.tutorEmail || form.tutorName || "tutor"} · Detailed grading report`} tagColor="#8A5CF6" subject={emails.tutorEmail?.subject} body={emails.tutorEmail?.body} />
+                  <EmailPanel title="Draft Tutor Email" subtitle={`To: ${form.tutorEmail || form.tutorName || "tutor"} · Detailed grading report`} tagColor="#8A5CF6" subject={emails.tutorEmail?.subject} body={emails.tutorEmail?.body} formatBody />
                   <div>
                     <EmailPanel title="Management Summary" subtitle="To: Anastasia, Molly, Carl, Adam · Triage + full tutor draft" tagColor="#f59e0b" subject={emails.managementEmail?.subject} body={emails.managementEmail?.body} />
                     {managementEmailSent === true && (
@@ -799,11 +846,6 @@ export default function CARSGrader() {
                   </div>
                 </div>
               )}
-
-              <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#5E6573", marginBottom: 8 }}>Full grading report</p>
-              <div style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: "26px 26px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-                <ReportRenderer text={report} />
-              </div>
             </div>
           )}
         </div>
