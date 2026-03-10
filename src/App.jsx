@@ -465,7 +465,11 @@ export default function CARSGrader() {
       return parts.join("\n");
     };
 
-    const scoreColor = sessionMeta.score >= 90 ? "#16a34a" : sessionMeta.score >= 75 ? "#8A5CF6" : sessionMeta.score >= 60 ? "#d97706" : "#dc2626";
+    const scoreNum = sessionMeta.score != null && sessionMeta.score !== "" ? Number(sessionMeta.score) : null;
+    const scoreDisplay = scoreNum != null && !Number.isNaN(scoreNum) ? String(scoreNum) : "—";
+    const scoreColor = scoreNum != null && !Number.isNaN(scoreNum)
+      ? (scoreNum >= 90 ? "#16a34a" : scoreNum >= 75 ? "#8A5CF6" : scoreNum >= 60 ? "#d97706" : "#dc2626")
+      : "#9CA3AF";
     const ratingColors = {
       "Exceeds Expectations":    { bg: "#f0fdf4", color: "#16a34a", border: "#bbf7d0" },
       "Meets Expectations":      { bg: "#eff6ff", color: "#2563eb", border: "#bfdbfe" },
@@ -492,7 +496,7 @@ export default function CARSGrader() {
   <table style="width:100%"><tr>
     <td style="width:100px;text-align:center;vertical-align:middle">
       <div style="display:inline-block;width:80px;height:80px;border-radius:50%;border:6px solid ${scoreColor};text-align:center;line-height:68px">
-        <span style="font-size:24px;font-weight:800;color:#2B2F40">${sessionMeta.score != null ? sessionMeta.score : "—"}</span><span style="font-size:11px;color:#5E6573">/100</span>
+        <span style="font-size:24px;font-weight:800;color:#2B2F40">${scoreDisplay}</span><span style="font-size:11px;color:#5E6573">/100</span>
       </div>
     </td>
     <td style="vertical-align:middle;padding-left:18px">
@@ -552,8 +556,9 @@ export default function CARSGrader() {
       );
       setReport(gradeText);
 
-      const sm = gradeText.match(/Scaled Score[^:*\n]*:?\*?\s*(\d+)\/100/i);
-      const ps = sm ? parseInt(sm[1]) : null;
+      let ps = null;
+      const sm = gradeText.match(/Scaled Score[^:*\n]*:?\*?\s*(\d+)\/100/i) || gradeText.match(/\*\*Scaled Score\*\*:\s*(\d+)/i) || gradeText.match(/Score[^0-9]*(\d+)\s*\/\s*100/i);
+      if (sm) ps = parseInt(sm[1], 10);
       if (ps !== null) setScore(ps);
 
       let pr = null;

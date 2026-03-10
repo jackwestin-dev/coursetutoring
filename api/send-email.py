@@ -37,17 +37,18 @@ def send_email(to_emails, subject, body, html=None):
     if not to_emails:
         return False, "No recipients"
     try:
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = subject
-        msg["From"] = FROM_EMAIL
-        msg["To"] = ", ".join(to_emails)
-        msg.attach(MIMEText(body, "plain", "utf-8"))
-        if html:
-            msg.attach(MIMEText(html, "html", "utf-8"))
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
             server.starttls()
             server.login(SMTP_USER, SMTP_PASSWORD)
-            server.sendmail(FROM_EMAIL, to_emails, msg.as_string())
+            for recipient in to_emails:
+                msg = MIMEMultipart("alternative")
+                msg["Subject"] = subject
+                msg["From"] = FROM_EMAIL
+                msg["To"] = recipient
+                msg.attach(MIMEText(body, "plain", "utf-8"))
+                if html:
+                    msg.attach(MIMEText(html, "html", "utf-8"))
+                server.sendmail(FROM_EMAIL, [recipient], msg.as_string())
         return True, None
     except Exception as e:
         return False, str(e)
