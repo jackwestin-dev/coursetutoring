@@ -26,6 +26,10 @@
     {
       "src": "api/director-digest.py",
       "use": "@vercel/python"
+    },
+    {
+      "src": "api/send-recent-evaluations.py",
+      "use": "@vercel/python"
     }
   ],
   "crons": [
@@ -37,6 +41,8 @@
     { "src": "/api/send-email", "dest": "/api/send-email.py" },
     { "src": "/api/record-session", "dest": "/api/record-session.py" },
     { "src": "/api/director-digest", "dest": "/api/director-digest.py" },
+    { "src": "/api/send-recent-evaluations", "dest": "/api/send-recent-evaluations.py" },
+    { "src": "/api/send-recent-evaluations/", "dest": "/api/send-recent-evaluations.py" },
     { "src": "/assets/(.*)", "dest": "/assets/$1" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
