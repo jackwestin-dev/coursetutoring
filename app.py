@@ -337,6 +337,10 @@ class SessionGrader:
             'google_doc_shared': {
                 'status': 'No',
                 'evidence': '(No evidence of shared documentation)'
+            },
+            'sop_major_takeaways': {
+                'status': 'Yes' if self._detect_major_takeaways() else 'No',
+                'evidence': 'Tutor asked about major takeaways in last 20% of session.' if self._detect_major_takeaways() else 'Required closing: Tutor must ask "What were your major takeaways?" at session end. This applies to all 515+, Intensive, and CARS sessions.'
             }
         }
         return checks
@@ -344,207 +348,240 @@ class SessionGrader:
     def _get_evidence(self, text, pattern):
         match = re.search(pattern, text, re.I)
         return '"' + match.group(0).strip() + '"' if match else None
-    
+
+    def _detect_major_takeaways(self):
+        """
+        Scan the last 20% of the transcript for the tutor asking about major takeaways.
+        Returns True if found, False if not. Must be in the last 20% of the transcript.
+        """
+        if not self.transcript:
+            return False
+        cutoff = int(len(self.transcript) * 0.80)
+        tail = self.transcript[cutoff:].lower()
+        phrases = [
+            "what were your major takeaways",
+            "what are your takeaways",
+            "what's your biggest takeaway",
+            "what is your biggest takeaway",
+            "what did you take away",
+            "what are the main things you're taking away",
+            "what would you say your takeaways are",
+            "major takeaway",
+            "takeaways from today",
+            "takeaways from this session",
+        ]
+        return any(phrase in tail for phrase in phrases)
+
+    def _detect_probing_questions(self):
+        """
+        Analyze the transcript for tutor probing behavior.
+        Returns a dict with signal counts for scoring Category E (Student-Led Learning).
+        """
+        text = (self.transcript or "").lower()
+        positive_patterns = [
+            r'what do you think',
+            r'why (?:is|do|would|does)',
+            r'how would you',
+            r'can you explain',
+            r'walk me through',
+            r'what happens (?:if|when)',
+            r"does that make sense",
+            r'try it',
+            r'you tell me',
+            r"what'?s your",
+            r'in your own words',
+        ]
+        positive_count = sum(len(re.findall(p, text)) for p in positive_patterns)
+        return {
+            'positive_count': positive_count,
+            'transcript_length': len(text),
+            'probing_density': positive_count / max(len(text) / 1000, 1),
+        }
+
     def grade(self):
-        """Run comprehensive grading."""
+        """Run comprehensive grading using 150-point architecture: SOP 60, Notes 45, Coaching 45."""
         info = self.extract_info()
         notes_check = self.check_notes_present()
-        action_count = len(info['action_items'])
-        
-        # Category 1: Preparation & Planning Readiness
-        prep_score = 3
-        prep_just = []
-        prep_missing = []
-        
+        probing = self._detect_probing_questions()
+
+        # Initialize new score dict (Section 2: SOP 60, Section 3: Notes 45, Section 4: Coaching 45)
+        self.scores = {
+            'sop_exam_schedule': 0, 'sop_aamc_deadlines': 0, 'sop_below_avg_topics': 0,
+            'sop_weekly_checklist': 0, 'sop_daily_tasks': 0, 'sop_strategy_notes': 0,
+            'sop_next_session': 0, 'sop_major_takeaways': 0,
+            'notes_preparation': 0, 'notes_study_plan': 0, 'notes_personalization': 0,
+            'coaching_strategy': 0, 'coaching_probing': 0,
+        }
+        self.justifications = {}
+        self.missing_items = {}
+
+        # --- Section 2: SOP Compliance (60 pts) ---
+        # 1. Exam schedule: 10 full, 5 partial, 0 missing
+        if notes_check['exam_schedule']['status'] == 'Yes':
+            self.scores['sop_exam_schedule'] = 10
+        elif notes_check['exam_schedule']['status'] == 'Partial':
+            self.scores['sop_exam_schedule'] = 5
+        # 2. AAMC deadlines: 10 full, 5 if referenced but no deadlines, 0
+        if notes_check['aamc_sequencing']['status'] == 'Yes':
+            self.scores['sop_aamc_deadlines'] = 10
+        elif notes_check['aamc_sequencing']['status'] == 'Partial':
+            self.scores['sop_aamc_deadlines'] = 5
+        # 3. Below-average topics: 10 full, 5 partial, 0
+        if notes_check['below_avg_topics']['status'] == 'Yes':
+            self.scores['sop_below_avg_topics'] = 10
+        elif notes_check['below_avg_topics']['status'] == 'Partial':
+            self.scores['sop_below_avg_topics'] = 5
+        # 4. Weekly checklist: 8 or 0
+        self.scores['sop_weekly_checklist'] = 8 if notes_check['weekly_checklist']['status'] in ('Yes', 'Partial') else 0
+        # 5. Daily tasks: 8 full, 4 partial, 0
+        if notes_check['daily_tasks']['status'] == 'Yes':
+            self.scores['sop_daily_tasks'] = 8
+        elif notes_check['daily_tasks']['status'] == 'Partial':
+            self.scores['sop_daily_tasks'] = 4
+        # 6. Strategy notes: 7 full, 3-4 brief, 0
+        if notes_check['strategy_notes']['status'] == 'Yes':
+            self.scores['sop_strategy_notes'] = 7
+        elif notes_check['strategy_notes']['status'] == 'Partial':
+            self.scores['sop_strategy_notes'] = 4
+        # 7. Next session: 4 or 0
+        self.scores['sop_next_session'] = 4 if notes_check['next_session']['status'] in ('Yes', 'Partial') else 0
+        # 8. Major takeaways (from transcript, binary)
+        self.scores['sop_major_takeaways'] = 3 if notes_check['sop_major_takeaways']['status'] == 'Yes' else 0
+
+        # --- Section 3: Notes Quality (45 pts) ---
+        # A. Preparation & Planning Readiness 0-15
+        prep_pts = 0
         if info['test_date'] != 'Not found':
-            prep_score += 2
-            prep_just.append("Test date ({}) identified".format(info['test_date']))
-        else:
-            prep_missing.append("Test date not documented")
-            
+            prep_pts += 4
         if info['baseline_score'] != 'Not found':
-            prep_score += 2
-            prep_just.append("Baseline score (~{}) discussed".format(info['baseline_score']))
-        else:
-            prep_missing.append("Baseline score not documented")
-            
+            prep_pts += 4
         if info['has_aamc']:
-            prep_score += 1
-            prep_just.append("AAMC materials referenced")
+            prep_pts += 2
         if info['weak_chem'] or info['weak_bio']:
-            prep_score += 1
-            prep_just.append("Weak areas identified through discussion")
-        else:
-            prep_missing.append("Below-average topics not prioritized in notes")
-            
-        if not prep_just:
-            prep_just.append("Limited evidence of preparation in notes")
-        prep_missing.append("No evidence tutor reviewed Basecamp data beforehand")
-        
-        self.scores['Preparation'] = min(prep_score, 10)
-        self.justifications['Preparation'] = ' '.join(prep_just) + ". However, no documentation of preparation exists in the notes."
-        self.missing_items['Preparation'] = prep_missing
-        
-        # Category 2: Study Plan Construction Quality
-        plan_score = 2
-        plan_just = []
-        plan_missing = []
-        
+            prep_pts += 3
+        self.scores['notes_preparation'] = min(prep_pts, 15)
+        self.justifications['notes_preparation'] = "Preparation evidence: test date, baseline, AAMC ref, weak areas."
+        self.missing_items['notes_preparation'] = [x for x in ["Test date", "Baseline score", "Below-average topics"] if (x == "Test date" and info['test_date'] == 'Not found') or (x == "Baseline score" and info['baseline_score'] == 'Not found') or (x == "Below-average topics" and not (info['weak_chem'] or info['weak_bio']))]
+
+        # B. Study Plan Construction 0-20
+        plan_pts = 0
         if notes_check['exam_schedule']['status'] != 'No':
-            plan_score += 2
-            plan_just.append("Some exam scheduling mentioned")
-        else:
-            plan_missing.append("Practice exam schedule (dates for all 11 exams)")
-            
+            plan_pts += 5
         if notes_check['aamc_sequencing']['status'] != 'No':
-            plan_score += 2
-            plan_just.append("AAMC sequencing discussed")
-        else:
-            plan_missing.append("AAMC sequencing and deadlines")
-            
+            plan_pts += 5
         if notes_check['weekly_checklist']['status'] != 'No':
-            plan_score += 2
-        else:
-            plan_missing.append("Weekly checklist/priorities")
-            
-        if notes_check['daily_tasks']['status'] != 'No':
-            plan_score += 2
-            plan_just.append("Some daily tasks captured")
-        else:
-            plan_missing.append("Daily tasks for Week 1")
-        
-        plan_missing.append("Chapters to review")
-        plan_missing.append("Question count assignments")
-        
-        self.scores['Study Plan'] = min(plan_score, 10)
-        self.justifications['Study Plan'] = "Notes contain minimal structured study plan. " + (' '.join(plan_just) if plan_just else "Only vague action items captured without specific assignments.")
-        self.missing_items['Study Plan'] = plan_missing
-        
-        # Category 3: Personalization & Load Calibration
-        personal_score = 4
-        personal_just = []
-        personal_missing = []
-        
-        if info['has_classes']:
-            personal_score += 1
-            personal_just.append("School commitments acknowledged")
-        if info['has_work']:
-            personal_score += 1
-            personal_just.append("Work schedule discussed")
+            plan_pts += 4
+        if notes_check['daily_tasks']['status'] == 'Yes':
+            plan_pts += 6
+        elif notes_check['daily_tasks']['status'] == 'Partial':
+            plan_pts += 3
+        self.scores['notes_study_plan'] = min(plan_pts, 20)
+        self.justifications['notes_study_plan'] = "Study plan structure: exam schedule, AAMC, weekly/daily tasks."
+        self.missing_items['notes_study_plan'] = [k for k, v in [('Exam schedule', notes_check['exam_schedule']), ('AAMC sequencing', notes_check['aamc_sequencing']), ('Weekly checklist', notes_check['weekly_checklist']), ('Daily tasks Week 1', notes_check['daily_tasks'])] if v['status'] == 'No']
+
+        # C. Personalization & Load 0-10
+        personal_pts = 0
+        if info['has_classes'] or info['has_work']:
+            personal_pts += 4
         if info['has_adhd']:
-            personal_score += 2
-            personal_just.append("ADHD accommodations discussed")
-        else:
-            personal_missing.append("Documentation of accommodation strategy")
-            
-        personal_missing.append("Weekly study hour estimate based on availability")
-        personal_missing.append("Pacing plan accounting for timeline")
-        if not info['has_classes']:
-            personal_missing.append("Adaptation for school schedule")
-        
-        self.scores['Personalization'] = min(personal_score, 10)
-        self.justifications['Personalization'] = ' '.join(personal_just) + ". However, constraints were not translated into documented workload calibration." if personal_just else "Minimal personalization evident in documentation."
-        self.missing_items['Personalization'] = personal_missing
-        
-        # Category 4: Strategy Portion Execution
-        strategy_score = 5
-        strategy_just = []
-        strategy_missing = []
-        
+            personal_pts += 3
+        if notes_check['daily_tasks']['status'] != 'No' or info['has_classes']:
+            personal_pts += 3
+        self.scores['notes_personalization'] = min(personal_pts, 10)
+        self.justifications['notes_personalization'] = "Personalization: availability, constraints, workload calibration."
+        self.missing_items['notes_personalization'] = ["Weekly study hours", "Pacing for timeline"] if not (info['has_classes'] or info['has_work']) else []
+
+        # --- Section 4: Transcript Coaching Quality (45 pts) ---
+        # D. Strategy Portion Execution 0-25 (cap 18 if only CARS or only science)
+        has_cars = bool(re.search(r'(?:mapping|main idea|CARS passage|argument|author.*opinion|reference to authority|contrast word)', self.transcript, re.I))
+        has_science = bool(re.search(r'(?:science passage|experimental passage|reference.*table|unit analysis|figure|graph|TAQT|buzz\s*word|discrete)', self.transcript, re.I))
+        both_covered = has_cars and has_science
+        strategy_raw = 0
         if info['has_strategy']:
-            strategy_score += 2
-            strategy_just.append("Strategy instruction evident in session")
+            strategy_raw += 8
         if len(info['topics_discussed']) >= 3:
-            strategy_score += 2
-            strategy_just.append("Multiple topics covered: " + ', '.join(info['topics_discussed'][:3]))
+            strategy_raw += 8
         elif info['topics_discussed']:
-            strategy_score += 1
-            strategy_just.append("Topics covered: " + ', '.join(info['topics_discussed']))
-        if info['transcript_length'] > 50000:
-            strategy_score += 1
-            strategy_just.append("Substantial session length indicates thorough instruction")
-        
-        strategy_missing.append("Summary of strategy concepts taught")
-        strategy_missing.append("Student-specific takeaways on question approach")
-        strategy_missing.append("Documentation of frameworks discussed")
-        
-        self.scores['Strategy'] = min(strategy_score, 10)
-        self.justifications['Strategy'] = ' '.join(strategy_just) + ". This was the session's strongest area based on transcript content."
-        self.missing_items['Strategy'] = strategy_missing
-        
-        # Category 5: Clarity & Student Buy-In
-        clarity_score = 3
-        clarity_just = []
-        clarity_missing = []
-        
-        if info['has_next_session']:
-            clarity_score += 2
-            clarity_just.append("Next session timing discussed")
+            strategy_raw += 5
+        if info['transcript_length'] > 40000:
+            strategy_raw += 4
+        strategy_raw = min(strategy_raw, 25)
+        self.scores['coaching_strategy'] = min(strategy_raw, 18) if not both_covered else strategy_raw
+        self.justifications['coaching_strategy'] = "Strategy coverage: CARS and science both covered." if both_covered else "Strategy coverage: only one of CARS or science covered; cap applied."
+        self.missing_items['coaching_strategy'] = [] if both_covered else ["Cover both CARS and science strategy for full points."]
+
+        # E. Student-Led Learning & Probing Questions 0-20
+        density = probing['probing_density']
+        count = probing['positive_count']
+        if count >= 8 or density >= 2.0:
+            probing_pts = 18
+        elif count >= 5 or density >= 1.2:
+            probing_pts = 14
+        elif count >= 3 or density >= 0.6:
+            probing_pts = 10
+        elif count >= 1:
+            probing_pts = 6
         else:
-            clarity_missing.append("Confirmed next session date")
-            
-        if action_count > 0:
-            clarity_score += 2
-            clarity_just.append("{} action items captured".format(action_count))
-        if action_count > 1:
-            clarity_score += 1
-            
-        clarity_missing.append("Comprehensive next-steps summary")
-        clarity_missing.append("Full list of assignments before next session")
-        clarity_missing.append("Study resource links documented")
-        
-        self.scores['Clarity'] = min(clarity_score, 10)
-        self.justifications['Clarity'] = ' '.join(clarity_just) + ". However, session ended without clear documented recap." if clarity_just else "No clear recap or direction provided in notes."
-        self.missing_items['Clarity'] = clarity_missing
-        
-        # Calculate average and rating
-        avg = sum(self.scores.values()) / len(self.scores)
-        
-        if avg >= 8.5:
-            rating = 'Strong Session'
-        elif avg >= 7.0:
-            rating = 'Adequate'
-        elif avg >= 5.0:
-            rating = 'Needs Improvement'
+            probing_pts = 2
+        self.scores['coaching_probing'] = min(probing_pts, 20)
+        self.justifications['coaching_probing'] = "Probing questions and student-led learning: {} signals in transcript.".format(count)
+        self.missing_items['coaching_probing'] = ["Use more probing questions; have student explain back."] if probing_pts < 10 else []
+
+        # --- Totals and rating ---
+        sop_total = sum(self.scores[k] for k in self.scores if k.startswith('sop_'))
+        notes_total = sum(self.scores[k] for k in self.scores if k.startswith('notes_'))
+        coaching_total = sum(self.scores[k] for k in self.scores if k.startswith('coaching_'))
+        raw_total = sop_total + notes_total + coaching_total
+        scaled_score = round((raw_total / 150.0) * 100)
+        if scaled_score >= 90:
+            rating = 'Exceeds'
+        elif scaled_score >= 75:
+            rating = 'Meets'
+        elif scaled_score >= 60:
+            rating = 'Coach'
         else:
-            rating = 'Review Required'
-        
+            rating = 'Remediate'
+
         self.findings = {
             'info': info,
             'notes_check': notes_check,
             'scores': self.scores,
-            'average': round(avg, 1),
+            'sop_total': sop_total,
+            'notes_total': notes_total,
+            'coaching_total': coaching_total,
+            'raw_total': raw_total,
+            'scaled_score': scaled_score,
             'rating': rating
         }
-        
         return self.findings
     
     def _get_biggest_risk(self):
         """Determine the biggest risk based on scores."""
-        if self.scores.get('Study Plan', 10) <= 4:
-            return "No formal session notes exist - student has no take-home documentation with study plan, exam schedule, weekly checklist, or daily tasks."
-        elif self.scores.get('Clarity', 10) <= 5:
-            return "Student may leave session without clear understanding of next steps and assignments."
-        elif self.scores.get('Preparation', 10) <= 4:
-            return "Session lacked preparation context - tutor may not have reviewed student's baseline data."
-        else:
-            return "Documentation gaps may impact student's ability to follow study plan independently."
+        if self.findings.get('sop_total', 0) < 35:
+            return "SOP compliance is low — student has insufficient take-home documentation (exam schedule, AAMC plan, weekly/daily tasks, or major takeaways closing)."
+        if self.scores.get('sop_major_takeaways', 0) == 0:
+            return "Required closing missing: tutor did not ask 'What were your major takeaways?' in the final portion of the session."
+        if self.findings.get('notes_total', 0) < 25:
+            return "Notes quality is weak — preparation, study plan, or personalization not adequately documented."
+        if self.findings.get('coaching_total', 0) < 25:
+            return "Coaching quality gaps — strategy coverage or probing questions need improvement."
+        return "Documentation and coaching gaps may impact student's ability to follow the study plan independently."
     
     def _get_top_fixes(self):
-        """Generate top 3 fixes based on lowest scores."""
+        """Generate top 3 fixes based on lowest scores and missing items."""
         fixes = []
-        
-        if self.scores.get('Study Plan', 10) <= 5:
-            fixes.append("Create a proper Google Doc with student snapshot, study schedule, AAMC sequencing, and weekly/daily task breakdown")
-        if self.scores.get('Study Plan', 10) <= 6:
-            fixes.append("Document the exam schedule explicitly (11 total FLs with dates and which tests to take when)")
-        if self.missing_items.get('Preparation'):
-            fixes.append("Add below-average topic list with specific daily/weekly assignments for weak areas")
-        if self.scores.get('Clarity', 10) <= 5:
-            fixes.append("Confirm next session date and document clear action items with deadlines")
-        if self.scores.get('Strategy', 10) <= 6:
-            fixes.append("Document strategy concepts taught during session for student reference")
-            
+        if self.scores.get('sop_exam_schedule', 0) < 10:
+            fixes.append("Document exam schedule with all FL dates explicitly in notes")
+        if self.scores.get('sop_aamc_deadlines', 0) < 10:
+            fixes.append("Document AAMC sequencing and deadlines in the study plan")
+        if self.scores.get('sop_major_takeaways', 0) == 0:
+            fixes.append("Required closing: Ask 'What were your major takeaways?' at session end (all 515+, Intensive, CARS sessions)")
+        if self.scores.get('sop_next_session', 0) == 0:
+            fixes.append("Confirm and document next session date in notes")
+        if self.scores.get('notes_study_plan', 0) < 14:
+            fixes.append("Create or complete study plan with weekly checklist and Week 1 daily tasks")
+        if self.scores.get('coaching_probing', 0) < 10:
+            fixes.append("Use more probing questions; have student explain back rather than lecturing")
         return fixes[:3]
     
     def _generate_gap_analysis(self):
@@ -592,16 +629,18 @@ class SessionGrader:
         
         # Areas for improvement
         improvements = []
+        sop_total = self.findings.get('sop_total', 0)
+        notes_check = self.findings['notes_check']
         
-        if self.scores['Study Plan'] <= 5:
+        if sop_total < 40:
             improvements.append({
-                'title': 'Critical: No Session Documentation Created',
-                'what': 'The session produced minimal documented notes. No formal notes document exists with structured study plan.',
-                'why': 'Student has no reference document for their study plan, exam schedule, or strategies discussed. They cannot follow a structured plan independently.',
-                'fix': 'Create a Google Doc immediately using the Notes v2 template. Include: Student Snapshot, Exam Schedule, Weekly Checklist, Week 1 Daily Tasks, Strategy Summary. Share with student AND anastasia@jackwestin.com, michaelmel@jackwestin.com. Budget 10-15 minutes at session end for documentation.'
+                'title': 'Critical: SOP Documentation Gaps',
+                'what': 'Multiple required SOP items are missing or partial (exam schedule, AAMC plan, weekly/daily tasks, or major takeaways closing).',
+                'why': 'Student needs a complete take-home document and a clear session close. Without it, they cannot follow the plan independently.',
+                'fix': 'Create a Google Doc with Student Snapshot, Exam Schedule, AAMC sequencing, Weekly Checklist, Week 1 Daily Tasks, Strategy Summary. End every session by asking: "What were your major takeaways?"'
             })
         
-        if self.findings['notes_check']['exam_schedule']['status'] == 'No':
+        if notes_check['exam_schedule']['status'] == 'No':
             improvements.append({
                 'title': 'Missing: Structured Exam Schedule',
                 'what': 'FL sequencing may have been discussed verbally but was not documented with specific dates.',
@@ -609,7 +648,7 @@ class SessionGrader:
                 'fix': 'Create a table: Week | Date | Exam | Notes. Be explicit with dates. Include the test date as the anchor.'
             })
         
-        if self.findings['notes_check']['below_avg_topics']['status'] == 'No':
+        if notes_check['below_avg_topics']['status'] == 'No':
             improvements.append({
                 'title': 'Missing: Below-Average Topic Prioritization',
                 'what': 'Weak areas may have been identified through discussion but no prioritized topic list was created in notes.',
@@ -617,12 +656,20 @@ class SessionGrader:
                 'fix': 'Create a "Priority Topics" section organized by MCAT section. Exclude topics covered by live course. Rank by importance.'
             })
         
-        if self.scores['Clarity'] <= 5:
+        if self.scores.get('sop_next_session', 0) == 0:
             improvements.append({
                 'title': 'Incomplete: Next Session Planning',
                 'what': 'No specific next session date was confirmed or documented.',
                 'why': 'Without a confirmed date, follow-up may slip. Session 1 momentum is critical.',
                 'fix': 'Always confirm a specific date before ending Session 1. Document it in notes with planned focus areas. Include "Student to bring: [items]".'
+            })
+        
+        if notes_check.get('sop_major_takeaways', {}).get('status') == 'No':
+            improvements.append({
+                'title': 'Required: Major Takeaways Closing',
+                'what': 'Tutor did not ask the student about their major takeaways in the final portion of the session.',
+                'why': 'This closing is required for all 515+, Intensive, and CARS sessions to reinforce learning.',
+                'fix': 'In the last 5–10 minutes, ask: "What were your major takeaways from today?" or similar. Document in notes if relevant.'
             })
         
         return positives, improvements
@@ -675,149 +722,123 @@ Top 3 Fixes
         report += """
 {sep}
 
-SECTION 2: CATEGORY SCORES (EQUAL WEIGHT, 1-10 EACH)
+SECTION 2: SOP COMPLIANCE CHECKLIST (60 pts)
 
-A. Preparation and Planning Readiness
+SOP Item                                          | Score | Max | Evidence
+--------------------------------------------------|-------|-----|---------
+Exam schedule (all FL dates documented)           | {sop_exam:2} | 10 | {exam_ev}
+AAMC deadlines/sequencing documented              | {sop_aamc:2} | 10 | {aamc_ev}
+Below-average topic review                        | {sop_topics:2} | 10 | {topics_ev}
+Weekly checklist present                          | {sop_weekly:2} |  8 | {weekly_ev}
+Daily tasks for Week 1 documented                 | {sop_daily:2} |  8 | {daily_ev}
+Strategy portion notes documented                 | {sop_strat:2} |  7 | {strat_ev}
+Next session tentatively scheduled                | {sop_next:2} |  4 | {next_ev}
+Major Takeaways closing (transcript)              | {sop_takeaways:2} |  3 | {takeaways_ev}
+--------------------------------------------------|-------|-----|---------
+SOP Subtotal                                      | {sop_total:2} | 60 |
 
-Score: {prep}/10
-
-Justification:
-{prep_just}
-
-Missing from Notes:
-""".format(
-            prep=self.scores['Preparation'],
-            prep_just=self.justifications['Preparation'],
-            sep=sep
-        )
-        for item in self.missing_items['Preparation']:
-            report += "- {}\n".format(item)
-        
-        report += """
 {sep}
 
-B. Study Plan Construction Quality
+SECTION 3: NOTES QUALITY (45 pts)
 
-Score: {plan}/10
+A. Preparation & Planning Readiness               | {notes_prep:2} | 15
+Justification: {notes_prep_just}
+Missing: {notes_prep_missing}
 
-Justification:
-{plan_just}
+B. Study Plan Construction Quality                | {notes_plan:2} | 20
+Justification: {notes_plan_just}
+Missing: {notes_plan_missing}
 
-Missing from Notes:
-""".format(
-            plan=self.scores['Study Plan'],
-            plan_just=self.justifications['Study Plan'],
-            sep=sep
-        )
-        for item in self.missing_items['Study Plan']:
-            report += "- {}\n".format(item)
-        
-        report += """
+C. Personalization & Load Calibration             | {notes_personal:2} | 10
+Justification: {notes_personal_just}
+Missing: {notes_personal_missing}
+Notes Subtotal                                    | {notes_total:2} | 45
+
 {sep}
 
-C. Personalization and Load Calibration
+SECTION 4: TRANSCRIPT COACHING QUALITY (45 pts)
 
-Score: {personal}/10
+D. Strategy Portion Execution                     | {coach_strat:2} | 25
+Justification: {coach_strat_just}
+Missing: {coach_strat_missing}
 
-Justification:
-{personal_just}
+E. Student-Led Learning & Probing Questions       | {coach_probing:2} | 20
+Justification: {coach_probing_just}
+Missing: {coach_probing_missing}
+Coaching Subtotal                                 | {coaching_total:2} | 45
 
-Missing from Notes:
-""".format(
-            personal=self.scores['Personalization'],
-            personal_just=self.justifications['Personalization'],
-            sep=sep
-        )
-        for item in self.missing_items['Personalization']:
-            report += "- {}\n".format(item)
-        
-        report += """
 {sep}
 
-D. Strategy Portion Execution
-
-Score: {strategy}/10
-
-Justification:
-{strategy_just}
-
-Missing from Notes:
-""".format(
-            strategy=self.scores['Strategy'],
-            strategy_just=self.justifications['Strategy'],
-            sep=sep
-        )
-        for item in self.missing_items['Strategy']:
-            report += "- {}\n".format(item)
-        
-        report += """
-{sep}
-
-E. Clarity and Student Buy-In
-
-Score: {clarity}/10
-
-Justification:
-{clarity_just}
-
-Missing from Notes:
-""".format(
-            clarity=self.scores['Clarity'],
-            clarity_just=self.justifications['Clarity'],
-            sep=sep
-        )
-        for item in self.missing_items['Clarity']:
-            report += "- {}\n".format(item)
-        
-        report += """
-{sep}
-
-SECTION 3: SOP COMPLIANCE CHECKLIST (NOTES-BASED)
+SECTION 5: SOP EVIDENCE (NOTES-BASED)
 
 SOP Item                                          | Present? | Evidence
 --------------------------------------------------|----------|--------------------------------------------------
 Exam schedule                                     | {exam_status:8} | {exam_ev}
 AAMC sequencing/deadlines                         | {aamc_status:8} | {aamc_ev}
-Below-average topics (excluding course-covered)   | {topics_status:8} | {topics_ev}
+Below-average topics                              | {topics_status:8} | {topics_ev}
 Weekly checklist                                  | {weekly_status:8} | {weekly_ev}
 Daily tasks for Week 1                            | {daily_status:8} | {daily_ev}
 Strategy portion notes                            | {strat_status:8} | {strat_ev}
-Tentative next session date                       | {next_status:8} | {next_ev}
+Next session date                                 | {next_status:8} | {next_ev}
+Major takeaways closing                           | {takeaways_status:8} | {takeaways_ev}
 Google Doc shared                                 | {doc_status:8} | {doc_ev}
-Baseline score documented                         | {base_status:8} | {base_ev}
-
-Compliance Summary: {compliant} fully compliant, {partial} partial, {missing} missing
+Baseline documented                               | {base_status:8} | {base_ev}
 
 {sep}
 
-SECTION 4: TRANSCRIPT VS. NOTES GAP ANALYSIS
+SECTION 6: TRANSCRIPT VS. NOTES GAP ANALYSIS
 
 What Was Discussed in Transcript (Should Have Been in Notes)
 
 Topic Discussed                                           | In Notes?
 ----------------------------------------------------------|----------
 """.format(
+            sop_exam=self.scores['sop_exam_schedule'],
+            sop_aamc=self.scores['sop_aamc_deadlines'],
+            sop_topics=self.scores['sop_below_avg_topics'],
+            sop_weekly=self.scores['sop_weekly_checklist'],
+            sop_daily=self.scores['sop_daily_tasks'],
+            sop_strat=self.scores['sop_strategy_notes'],
+            sop_next=self.scores['sop_next_session'],
+            sop_takeaways=self.scores['sop_major_takeaways'],
+            sop_total=f['sop_total'],
+            notes_prep=self.scores['notes_preparation'],
+            notes_prep_just=self.justifications.get('notes_preparation', ''),
+            notes_prep_missing=', '.join(self.missing_items.get('notes_preparation', [])),
+            notes_plan=self.scores['notes_study_plan'],
+            notes_plan_just=self.justifications.get('notes_study_plan', ''),
+            notes_plan_missing=', '.join(self.missing_items.get('notes_study_plan', [])),
+            notes_personal=self.scores['notes_personalization'],
+            notes_personal_just=self.justifications.get('notes_personalization', ''),
+            notes_personal_missing=', '.join(self.missing_items.get('notes_personalization', [])),
+            notes_total=f['notes_total'],
+            coach_strat=self.scores['coaching_strategy'],
+            coach_strat_just=self.justifications.get('coaching_strategy', ''),
+            coach_strat_missing=', '.join(self.missing_items.get('coaching_strategy', [])),
+            coach_probing=self.scores['coaching_probing'],
+            coach_probing_just=self.justifications.get('coaching_probing', ''),
+            coach_probing_missing=', '.join(self.missing_items.get('coaching_probing', [])),
+            coaching_total=f['coaching_total'],
             exam_status=notes_check['exam_schedule']['status'],
-            exam_ev=notes_check['exam_schedule']['evidence'][:50],
+            exam_ev=(notes_check['exam_schedule']['evidence'] or '')[:50],
             aamc_status=notes_check['aamc_sequencing']['status'],
-            aamc_ev=notes_check['aamc_sequencing']['evidence'][:50],
+            aamc_ev=(notes_check['aamc_sequencing']['evidence'] or '')[:50],
             topics_status=notes_check['below_avg_topics']['status'],
-            topics_ev=notes_check['below_avg_topics']['evidence'][:50],
+            topics_ev=(notes_check['below_avg_topics']['evidence'] or '')[:50],
             weekly_status=notes_check['weekly_checklist']['status'],
-            weekly_ev=notes_check['weekly_checklist']['evidence'][:50],
+            weekly_ev=(notes_check['weekly_checklist']['evidence'] or '')[:50],
             daily_status=notes_check['daily_tasks']['status'],
-            daily_ev=notes_check['daily_tasks']['evidence'][:50],
+            daily_ev=(notes_check['daily_tasks']['evidence'] or '')[:50],
             strat_status=notes_check['strategy_notes']['status'],
-            strat_ev=notes_check['strategy_notes']['evidence'][:50],
+            strat_ev=(notes_check['strategy_notes']['evidence'] or '')[:50],
             next_status=notes_check['next_session']['status'],
-            next_ev=notes_check['next_session']['evidence'][:50],
+            next_ev=(notes_check['next_session']['evidence'] or '')[:50],
+            takeaways_status=notes_check.get('sop_major_takeaways', {}).get('status', 'No'),
+            takeaways_ev=(notes_check.get('sop_major_takeaways', {}).get('evidence', '') or '')[:50],
             doc_status=notes_check['google_doc_shared']['status'],
-            doc_ev=notes_check['google_doc_shared']['evidence'][:50],
+            doc_ev=(notes_check['google_doc_shared']['evidence'] or '')[:50],
             base_status=notes_check['baseline_documented']['status'],
-            base_ev=notes_check['baseline_documented']['evidence'][:50],
-            compliant=sum(1 for v in notes_check.values() if v['status'] == 'Yes'),
-            partial=sum(1 for v in notes_check.values() if v['status'] == 'Partial'),
-            missing=sum(1 for v in notes_check.values() if v['status'] == 'No'),
+            base_ev=(notes_check['baseline_documented']['evidence'] or '')[:50],
             sep=sep
         )
         
@@ -828,7 +849,7 @@ Topic Discussed                                           | In Notes?
         report += """
 {sep}
 
-SECTION 5: RECOMMENDED NOTES REWRITE (NOTES V2)
+SECTION 7: RECOMMENDED NOTES REWRITE (NOTES V2)
 
 Given that multiple critical SOP items are missing from notes, below is a recommended rewrite.
 
@@ -838,7 +859,7 @@ Given that multiple critical SOP items are missing from notes, below is a recomm
 
 {sep}
 
-SECTION 6: TUTOR FEEDBACK
+SECTION 8: TUTOR FEEDBACK
 
 What You Did Well
 
@@ -884,42 +905,64 @@ A simple template can make this fast: spend the last 10 minutes of each session 
 
 FINAL SCORE SUMMARY
 
-Category                                | Score
-----------------------------------------|-------
-Preparation & Planning Readiness        | {prep}/10
-Study Plan Construction Quality         | {plan}/10
-Personalization & Load Calibration      | {personal}/10
-Strategy Portion Execution              | {strategy}/10
-Clarity & Student Buy-In                | {clarity}/10
-----------------------------------------|-------
-Average                                 | {avg}/10
+Section                              | Score  | Max
+-------------------------------------|--------|-----
+SOP Compliance Checklist             | {sop_total:2}     | 60
+  — Exam schedule                    | {sop_exam:2}      | 10
+  — AAMC deadlines                   | {sop_aamc:2}      | 10
+  — Below-average topics             | {sop_topics:2}      | 10
+  — Weekly checklist                | {sop_weekly:2}      |  8
+  — Daily tasks (Week 1)             | {sop_daily:2}      |  8
+  — Strategy notes                   | {sop_strat:2}      |  7
+  — Next session scheduled           | {sop_next:2}      |  4
+  — Major takeaways closing          | {sop_takeaways:2}      |  3
+Notes Quality                        | {notes_total:2}     | 45
+  A. Preparation & Planning         | {notes_prep:2}     | 15
+  B. Study Plan Construction         | {notes_plan:2}     | 20
+  C. Personalization & Load          | {notes_personal:2}     | 10
+Transcript Coaching Quality          | {coaching_total:2}     | 45
+  D. Strategy Portion Execution      | {coach_strat:2}     | 25
+  E. Student-Led / Probing Qs        | {coach_probing:2}     | 20
+-------------------------------------|--------|-----
+RAW TOTAL                            | {raw_total:3}    | 150
+SCALED SCORE                         | {scaled_score:2}/100
 
-{sep}
-
-OVERALL ASSESSMENT: {rating}
+Overall Rating: {rating}
 
 Summary:
 {summary}
 
 Recommended Actions:
 1. Tutor should immediately create and share a comprehensive Session 1 Google Doc (see Notes v2 above)
-2. Confirm next session date in writing
+2. Confirm next session date in writing; close every session with "What were your major takeaways?"
 3. Future sessions should include 5-10 minutes at end for documentation review with student
 
 {sep}
 
 Graded by: JW Session Notes Grader Agent
-Grading Agent Version: 1.0
-Reference Documents: first_session_sop_agent.md, grading_first_session_agent.md
+Grading Agent Version: 2.0 (150-point architecture)
+Reference Documents: first_session_sop_agent.md, grading_first_session_agent.md, session_1_grading_agent.md
 """.format(
             tutor=self.tutor_name.split()[0] if self.tutor_name else 'Tutor',
-            prep=self.scores['Preparation'],
-            plan=self.scores['Study Plan'],
-            personal=self.scores['Personalization'],
-            strategy=self.scores['Strategy'],
-            clarity=self.scores['Clarity'],
-            avg=f['average'],
-            rating=f['rating'].upper(),
+            sop_total=f['sop_total'],
+            sop_exam=self.scores['sop_exam_schedule'],
+            sop_aamc=self.scores['sop_aamc_deadlines'],
+            sop_topics=self.scores['sop_below_avg_topics'],
+            sop_weekly=self.scores['sop_weekly_checklist'],
+            sop_daily=self.scores['sop_daily_tasks'],
+            sop_strat=self.scores['sop_strategy_notes'],
+            sop_next=self.scores['sop_next_session'],
+            sop_takeaways=self.scores['sop_major_takeaways'],
+            notes_total=f['notes_total'],
+            notes_prep=self.scores['notes_preparation'],
+            notes_plan=self.scores['notes_study_plan'],
+            notes_personal=self.scores['notes_personalization'],
+            coaching_total=f['coaching_total'],
+            coach_strat=self.scores['coaching_strategy'],
+            coach_probing=self.scores['coaching_probing'],
+            raw_total=f['raw_total'],
+            scaled_score=f['scaled_score'],
+            rating=f['rating'],
             summary=self._generate_summary(),
             sep=sep
         )
@@ -1069,15 +1112,15 @@ Document shared with: anastasia@jackwestin.com, michaelmel@jackwestin.com
         return notes_v2
     
     def _generate_summary(self):
-        avg = self.findings['average']
-        if avg >= 8.5:
-            return "Excellent session with comprehensive documentation. All major SOP items are addressed and the student has clear direction."
-        elif avg >= 7.0:
-            return "Good session with adequate documentation. Minor improvements recommended for completeness."
-        elif avg >= 5.0:
-            return "The tutoring session content appears solid based on transcript analysis. However, the session documentation is deficient. The student has minimal take-home artifacts: limited study schedule documentation, incomplete exam calendar, and sparse task lists. Without proper notes, the student cannot effectively reference what was discussed or follow a structured plan. This creates risk for student outcomes and does not fully meet SOP requirements."
+        scaled = self.findings.get('scaled_score', 0)
+        if scaled >= 90:
+            return "Excellent session with comprehensive documentation and strong coaching. All major SOP items are addressed and the student has clear direction."
+        elif scaled >= 75:
+            return "Good session with adequate documentation. Minor improvements recommended for completeness. Score bands: 90-100 Exceeds, 75-89 Meets, 60-74 Coach, below 60 Remediate."
+        elif scaled >= 60:
+            return "The tutoring session content appears solid based on transcript analysis. However, documentation or coaching gaps exist. Address SOP items (exam schedule, AAMC plan, major takeaways closing) and notes quality to improve the scaled score."
         else:
-            return "Significant documentation gaps identified. The session requires immediate follow-up to ensure the student has necessary study materials and clear direction. Priority action: Create comprehensive session notes immediately."
+            return "Significant documentation or coaching gaps identified. The session requires immediate follow-up: create comprehensive session notes, confirm next session date, and close every session by asking 'What were your major takeaways?'"
 
 
 def send_email(to_emails, subject, body):
@@ -1670,7 +1713,7 @@ def get_html():
                 
                 if (json.success) {
                     result.className = 'result success';
-                    result.innerHTML = '<strong>Grading Complete!</strong><br>Rating: ' + json.overall_rating + ' (Average: ' + json.average_score + '/10)<br>Email sent: ' + (json.email_sent ? 'Yes' : 'No - check email config');
+                    result.innerHTML = '<strong>Grading Complete!</strong><br>Score: ' + json.scaled_score + '/100 — <em>' + json.overall_rating + '</em><br>Raw: ' + json.raw_total + '/150 (SOP: ' + json.sop_total + '/60 | Notes: ' + json.notes_total + '/45 | Coaching: ' + json.coaching_total + '/45)<br>Email sent: ' + (json.email_sent ? 'Yes' : 'No - check email config');
                     report.textContent = json.report;
                     report.style.display = 'block';
                 } else {
@@ -1819,7 +1862,11 @@ def grade_session():
         return jsonify({
             'success': True,
             'scores': findings['scores'],
-            'average_score': findings['average'],
+            'sop_total': findings['sop_total'],
+            'notes_total': findings['notes_total'],
+            'coaching_total': findings['coaching_total'],
+            'raw_total': findings['raw_total'],
+            'scaled_score': findings['scaled_score'],
             'overall_rating': findings['rating'],
             'director_email': DIRECTOR_EMAIL,
             'email_sent': email_sent,
