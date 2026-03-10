@@ -24,11 +24,21 @@ SMTP_PASSWORD = (os.environ.get("SMTP_PASSWORD", "") or "").strip().replace(" ",
 
 
 def get_director_emails():
-    raw = os.environ.get("DIRECTOR_EMAILS", "")
-    if not raw:
-        single = os.environ.get("DIRECTOR_EMAIL", "anastasia@jackwestin.com")
-        return [e.strip() for e in single.split(",") if e.strip()]
-    return [e.strip() for e in raw.split(",") if e.strip()]
+    """Parse DIRECTOR_EMAILS (comma-separated) or fallback to DIRECTOR_EMAIL. Handles quotes and spaces."""
+    def parse(s):
+        if not s:
+            return []
+        s = s.strip().strip('"').strip("'")
+        return [e.strip() for e in s.split(",") if e.strip() and "@" in e]
+
+    raw = (os.environ.get("DIRECTOR_EMAILS") or "").strip()
+    if raw:
+        out = parse(raw)
+        if out:
+            return out
+    single = (os.environ.get("DIRECTOR_EMAIL") or "anastasia@jackwestin.com").strip()
+    out = parse(single)
+    return out if out else ["anastasia@jackwestin.com"]
 
 
 def send_email(to_emails, subject, body, html=None):

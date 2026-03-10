@@ -440,9 +440,77 @@ export default function CARSGrader() {
   const [gradeError, setGradeError] = useState(null);
   const reportRef = useRef(null);
 
-  // Build a styled HTML email from the management summary + full grading report
-  const buildHtmlEmail = (summaryText, reportText, sessionMeta) => {
+  // Build a styled HTML email from the management summary + full grading report + draft tutor email at bottom
+  const buildHtmlEmail = (summaryText, reportText, sessionMeta, tutorEmailBody) => {
     const esc = (s) => (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+    // Use only triage + summary (strip draft tutor email if present)
+    let triageSummaryText = summaryText || "";
+    if (tutorEmailBody) {
+      const divider = triageSummaryText.match(/\n[-─━─]{10,}\s*\n|\n---\s*\n/);
+      if (divider) triageSummaryText = triageSummaryText.slice(0, divider.index).trim();
+      else {
+        const hiMatch = triageSummaryText.search(/\n(Hi |Dear )[A-Za-z]/);
+        if (hiMatch > 0) triageSummaryText = triageSummaryText.slice(0, hiMatch).trim();
+      }
+    }
+
+    const renderTriageSummary = (text) => {
+      const lines = (text || "").split("\n");
+      const parts = [];
+      let i = 0;
+      const blockStyle = "background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:16px 20px;margin:10px 0";
+      const labelStyle = "font-weight:700;color:#92400e;font-size:12px;margin-right:8px";
+      while (i < lines.length) {
+        const line = lines[i];
+        const t = line.trim();
+        if (/^[━─\-]{5,}$/.test(t)) { i++; continue; }
+        if (/^TRIAGE SUMMARY$/i.test(t)) {
+          parts.push(`<div style="font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#b45309;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid #fde68a">TRIAGE SUMMARY</div>`);
+          i++; continue;
+        }
+        if (/^Tutor:/.test(t) && (t.includes("|") || t.includes("Student"))) {
+          parts.push(`<p style="color:#5E6573;font-size:13px;margin:6px 0;line-height:1.6">${esc(t)}</p>`);
+          i++; continue;
+        }
+        if (/^Score:\s*.+\|\s*Rating:/i.test(t)) {
+          const scoreMatch = t.match(/Score:\s*(\d+)\/100\s*\|\s*Rating:\s*(.+)/i);
+          const scoreNum = scoreMatch ? parseInt(scoreMatch[1], 10) : null;
+          const scoreColor = scoreNum != null ? (scoreNum >= 90 ? "#16a34a" : scoreNum >= 75 ? "#8A5CF6" : scoreNum >= 60 ? "#d97706" : "#dc2626") : "#5E6573";
+          parts.push(`<p style="margin:10px 0 6px;font-size:13px"><span style="${labelStyle}">Score:</span><span style="font-weight:700;color:${scoreColor};margin-right:12px">${scoreMatch ? scoreMatch[1] + "/100" : ""}</span><span style="${labelStyle}">Rating:</span><span style="color:#2B2F40">${scoreMatch ? esc(scoreMatch[2].trim()) : esc(t)}</span></p>`);
+          i++; continue;
+        }
+        if (/^Action Required:/i.test(t)) {
+          const action = t.replace(/^Action Required:\s*/i, "").trim();
+          const actionColor = /YES|immediate|Remediation/i.test(action) ? "#dc2626" : /MONITOR|Monitor/i.test(action) ? "#d97706" : "#16a34a";
+          parts.push(`<p style="margin:8px 0 14px;font-size:13px"><span style="${labelStyle}">Action Required:</span><span style="font-weight:700;color:${actionColor}">${esc(action)}</span></p>`);
+          i++; continue;
+        }
+        if (/^SCORE BAND GUIDE$/i.test(t)) {
+          parts.push(`<div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#92400e;margin:16px 0 8px">Score band guide</div>`);
+          parts.push(`<table style="width:100%;border-collapse:collapse;font-size:12px;color:#5E6573;margin-bottom:12px">`);
+          i++;
+          for (let r = 0; r < 4 && i < lines.length; r++, i++) {
+            const row = lines[i].trim();
+            if (!row) break;
+            const byArrow = row.split(/\s*[→]\s*/).map(c => c.trim());
+            const band = byArrow[0] || row.slice(0, 15);
+            const desc = (byArrow.slice(1).join(" → ") || row).split(/\s*[—–-]\s*/).map(c => c.trim()).join(" — ") || row;
+            parts.push(`<tr><td style="padding:4px 8px 4px 0;font-weight:600;color:#2B2F40;width:90px">${esc(band)}</td><td style="padding:4px 0">${esc(desc)}</td></tr>`);
+          }
+          parts.push("</table>");
+          continue;
+        }
+        if (!t) {
+          parts.push('<div style="height:8px"></div>');
+          i++; continue;
+        }
+        if (t.startsWith("JW QA System") || t.startsWith("Sign:")) { i++; continue; }
+        parts.push(`<p style="color:#5E6573;font-size:13px;line-height:1.7;margin:8px 0">${esc(t)}</p>`);
+        i++;
+      }
+      return parts.join("");
+    };
 
     const renderReport = (text) => {
       const lines = (text || "").split("\n");
@@ -505,7 +573,27 @@ export default function CARSGrader() {
       return parts.join("\n");
     };
 
-    const scoreNum = sessionMeta.score != null && sessionMeta.score !== "" ? Number(sessionMeta.score) : null;
+    let scoreNum = sessionMeta.score != null && sessionMeta.score !== "" ? Number(sessionMeta.score) : null;
+    if (scoreNum == null || Number.isNaN(scoreNum)) {
+      const reportScorePatterns = [
+        /Scaled Score[^:*\n]*:?\*?\s*(\d+)\s*\/\s*100/i,
+        /\*\*Scaled Score\*\*:\s*(\d+)/i,
+        /FINAL SCORE[:\s]+(\d+)\s*[\/\-]\s*100/i,
+        /(\d+)\s*\/\s*100\s*[—\-]\s*(?:Exceeds|Meets|Needs)/i,
+        /\|\s*\*\*(\d+)\*\*\s*\|\s*\*\*100\*\*/i,
+        /Score[^0-9]*(\d+)\s*\/\s*100/i,
+      ];
+      for (const re of reportScorePatterns) {
+        const m = (reportText || "").match(re);
+        if (m) {
+          const n = parseInt(m[1], 10);
+          if (n >= 0 && n <= 100) {
+            scoreNum = n;
+            break;
+          }
+        }
+      }
+    }
     const scoreDisplay = scoreNum != null && !Number.isNaN(scoreNum) ? String(scoreNum) : "—";
     const scoreColor = scoreNum != null && !Number.isNaN(scoreNum)
       ? (scoreNum >= 90 ? "#16a34a" : scoreNum >= 75 ? "#8A5CF6" : scoreNum >= 60 ? "#d97706" : "#dc2626")
@@ -546,20 +634,30 @@ export default function CARSGrader() {
   </tr></table>
 </div>
 
-<!-- Management summary -->
+<!-- Triage summary (styled) -->
 <div style="background:#fff;border:1px solid #E5E7EB;border-top:none;padding:24px 28px">
-  <h2 style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#f59e0b;margin:0 0 14px;border-bottom:1px solid #fde68a;padding-bottom:8px">Management Summary</h2>
-  ${summaryText.split("\n").map(l => `<p style="color:#5E6573;font-size:13px;line-height:1.7;margin:4px 0">${esc(l)}</p>`).join("\n")}
+  <h2 style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#f59e0b;margin:0 0 14px;border-bottom:1px solid #fde68a;padding-bottom:8px">Triage Summary</h2>
+  <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:18px 20px">
+    ${renderTriageSummary(triageSummaryText)}
+  </div>
 </div>
 
 <!-- Full grading report -->
-<div style="background:#fff;border:1px solid #E5E7EB;border-top:none;border-radius:0 0 14px 14px;padding:24px 28px">
+<div style="background:#fff;border:1px solid #E5E7EB;border-top:none;padding:24px 28px">
   <h2 style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#8A5CF6;margin:0 0 14px;border-bottom:1px solid #EDE9FE;padding-bottom:8px">Full Grading Report</h2>
   ${renderReport(reportText)}
 </div>
 
+<!-- Draft tutor email (at bottom) -->
+${tutorEmailBody ? `
+<div style="background:#fff;border:1px solid #E5E7EB;border-top:none;padding:24px 28px">
+  <h2 style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#8A5CF6;margin:0 0 14px;border-bottom:1px solid #EDE9FE;padding-bottom:8px">Draft Tutor Email</h2>
+  <div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:10px;padding:18px 20px;font-size:13px;color:#2B2F40;line-height:1.7;white-space:pre-wrap;word-break:break-word">${esc(tutorEmailBody)}</div>
+</div>
+` : ""}
+
 <!-- Score bands legend -->
-<div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:10px;padding:14px 18px;margin-top:12px;text-align:center">
+<div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:0 0 14px 14px;padding:14px 18px;margin-top:0;text-align:center">
   <span style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#5E6573">Score bands: </span>
   <span style="padding:3px 8px;border-radius:6px;background:#f0fdf4;border:1px solid #bbf7d0;font-size:11px;color:#16a34a;font-weight:600">90–100 Exceeds</span>
   <span style="padding:3px 8px;border-radius:6px;background:#eff6ff;border:1px solid #bfdbfe;font-size:11px;color:#2563eb;font-weight:600;margin-left:4px">75–89 Meets</span>
@@ -597,8 +695,21 @@ export default function CARSGrader() {
       setReport(gradeText);
 
       let ps = null;
-      const sm = gradeText.match(/Scaled Score[^:*\n]*:?\*?\s*(\d+)\/100/i) || gradeText.match(/\*\*Scaled Score\*\*:\s*(\d+)/i) || gradeText.match(/Score[^0-9]*(\d+)\s*\/\s*100/i);
-      if (sm) ps = parseInt(sm[1], 10);
+      const scorePatterns = [
+        /Scaled Score[^:*\n]*:?\*?\s*(\d+)\s*\/\s*100/i,
+        /\*\*Scaled Score\*\*:\s*(\d+)/i,
+        /FINAL SCORE[:\s]+(\d+)\s*[\/\-]\s*100/i,
+        /(\d+)\s*\/\s*100\s*[—\-]\s*(?:Exceeds|Meets|Needs)/i,
+        /\|\s*\*\*(\d+)\*\*\s*\|\s*\*\*100\*\*/i,
+        /Score[^0-9]*(\d+)\s*\/\s*100/i,
+      ];
+      for (const re of scorePatterns) {
+        const sm = gradeText.match(re);
+        if (sm) {
+          ps = parseInt(sm[1], 10);
+          if (ps >= 0 && ps <= 100) break;
+        }
+      }
       if (ps !== null) setScore(ps);
 
       let pr = null;
@@ -633,7 +744,7 @@ export default function CARSGrader() {
           courseType: form.courseType === "515" ? "515+ Course" : form.courseType === "intensive" ? "Intensive" : "CARS Strategy",
           score: ps,
           rating: pr,
-        });
+        }, parsed.tutorEmail?.body);
         try {
           const sendRes = await fetch("/api/send-email", {
             method: "POST",

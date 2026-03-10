@@ -1,14 +1,14 @@
 # Receiving emails from the Session Grader on Vercel
 
-To get the **management email** (and the 3-day director digest) when the app runs on Vercel, set these in the project’s **Environment Variables**:
+To get the **management email** (and the 3-day director digest) when the app runs on Vercel, set these in the project's **Environment Variables**:
 
 ## Required for sending mail
 
 | Variable | Example | Notes |
 |----------|---------|--------|
-| `SMTP_SERVER` | `smtp.office365.com` or `smtp.gmail.com` | **Hostname only** — not an email address. Use your provider’s SMTP server. |
+| `SMTP_SERVER` | `smtp.office365.com` or `smtp.gmail.com` | **Hostname only** — not an email address. Use your provider's SMTP server. |
 | `SMTP_PORT` | `587` | Optional in code (defaults to 587). Set if your provider uses a different port. |
-| `FROM_EMAIL` | `anastasia@jackwestin.com` | “From” address. If you don’t set `SMTP_USER`, this is also used as the SMTP login. |
+| `FROM_EMAIL` | `anastasia@jackwestin.com` | "From" address. If you don't set `SMTP_USER`, this is also used as the SMTP login. |
 | `SMTP_USER` | *(optional)* | SMTP login; if unset, `FROM_EMAIL` is used. |
 | `SMTP_PASSWORD` | *(app password)* | Password or app password for `SMTP_USER` / `FROM_EMAIL`. |
 
@@ -25,6 +25,13 @@ To get the **management email** (and the 3-day director digest) when the app run
 2. Add each variable above for **Production** (and Preview if you want it there too).
 3. **Redeploy** after changing env vars (or trigger a new deployment) so the serverless functions get the new values.
 4. For **Gmail**: use an [App Password](https://support.google.com/accounts/answer/185833), not your normal password.
-5. If you still don’t receive mail: open your deployment URL + `/api/send-email` in the browser (GET) to see if SMTP is configured. Then check Vercel **Project → Logs** for `/api/send-email` errors; the app also shows the error under "Email not sent" after grading.
+5. If you still don't receive mail: open your deployment URL + `/api/send-email` in the browser (GET) to see if SMTP is configured. Then check Vercel **Project → Logs** for `/api/send-email` errors; the app also shows the error under "Email not sent" after grading.
 
-No need to “add emails to” SMTP itself — SMTP is the **sending** account. The **recipients** are determined by `DIRECTOR_EMAILS` (or `DIRECTOR_EMAIL`) in the app.
+No need to "add emails to" SMTP itself — SMTP is the **sending** account. The **recipients** are determined by `DIRECTOR_EMAILS` (or `DIRECTOR_EMAIL`) in the app.
+
+## If only one director gets the email
+
+1. **Check what the server sees:** Open `https://<your-app>.vercel.app/api/send-email` in the browser (GET). You'll see `recipients`, `recipients_count`, and `source`. If `recipients_count` is 1, the server is only seeing one address.
+2. **Variable name:** Use exactly `DIRECTOR_EMAILS` (with an S, all caps). Names are case-sensitive.
+3. **Value:** Comma-separated only, e.g. `Anastasia@jackwestin.com,molly@jackwestin.com,carlb@jackwestin.com,adam@jackwestin.com`. Spaces after commas are OK.
+4. **Redeploy:** After adding or changing Environment Variables, trigger a **new deployment**. Serverless functions only read env vars at cold start; they won't see changes until the next deploy.

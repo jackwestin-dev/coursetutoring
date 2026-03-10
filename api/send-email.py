@@ -23,12 +23,22 @@ SMTP_PASSWORD = (os.environ.get("SMTP_PASSWORD", "") or "").strip().replace(" ",
 
 
 def get_director_emails():
-    raw = os.environ.get("DIRECTOR_EMAILS", "")
-    if not raw:
-        # Fallback: single director
-        single = os.environ.get("DIRECTOR_EMAIL", "anastasia@jackwestin.com")
-        return [e.strip() for e in single.split(",") if e.strip()]
-    return [e.strip() for e in raw.split(",") if e.strip()]
+    """Parse DIRECTOR_EMAILS (comma-separated) or fallback to DIRECTOR_EMAIL. Handles quotes and spaces."""
+    def parse(s):
+        if not s:
+            return []
+        s = s.strip().strip('"').strip("'")
+        return [e.strip() for e in s.split(",") if e.strip() and "@" in e]
+
+    raw = (os.environ.get("DIRECTOR_EMAILS") or "").strip()
+    if raw:
+        out = parse(raw)
+        if out:
+            return out
+    # Fallback: DIRECTOR_EMAIL (also allow comma-separated list)
+    single = (os.environ.get("DIRECTOR_EMAIL") or "anastasia@jackwestin.com").strip()
+    out = parse(single)
+    return out if out else ["anastasia@jackwestin.com"]
 
 
 def send_email(to_emails, subject, body, html=None):
@@ -76,13 +86,16 @@ class handler(BaseHTTPRequestHandler):
         """Diagnostic: check if SMTP and recipients are configured."""
         to_emails = get_director_emails()
         smtp_ok = bool(SMTP_USER and SMTP_PASSWORD)
+        has_plural = bool((os.environ.get("DIRECTOR_EMAILS") or "").strip())
         self._json(200, {
             "smtp_configured": smtp_ok,
             "smtp_server": SMTP_SERVER,
             "from_email": FROM_EMAIL,
             "recipients": to_emails,
             "recipients_count": len(to_emails),
-            "hint": "Set SMTP_SERVER (hostname), SMTP_PORT (587), FROM_EMAIL, SMTP_PASSWORD, and DIRECTOR_EMAIL or DIRECTOR_EMAILS in Vercel." if not smtp_ok else None,
+            "source": "DIRECTOR_EMAILS" if has_plural else "DIRECTOR_EMAIL",
+            "hint": "Set SMTP_SERVER (hostname), SMTP_PORT (587), FROM_EMAIL, SMTP_PASSWORD, and DIRECTOR_EMAILS (comma-separated) in Vercel → Settings → Environment Variables, then redeploy." if not smtp_ok else None,
+            "redeploy_note": "After changing env vars in Vercel, redeploy so the function sees them." if len(to_emails) <= 1 and has_plural else None,
         })
 
     def do_POST(self):
