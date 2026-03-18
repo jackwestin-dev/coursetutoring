@@ -94,20 +94,20 @@ CORE GRADING RULES
 SESSION 1 RUBRIC — Onboarding & Plan Build (100 pts documentation + 50 pts coaching = 150 total, scaled to 100)
 PASS/FAIL GATES: Session Notes Template copied and completed | Strategy Portion completed (teach-back occurred) | Study Plan updated | Fathom summary forwarded (mark Unable to Verify)
 
-A. Preparation & Planning Readiness — 20 pts
-   20: Test date confirmed, baseline CARS score reviewed, JW mapping principles noted, below-average areas identified
-   15: Most elements present  10: Test date/goals only  5: Mostly reactive  0: No prep
+A. Preparation & Planning Readiness — 15 pts
+   15: Test date confirmed, baseline CARS score reviewed, JW mapping principles noted, below-average areas identified
+   11: Most elements present  8: Test date/goals only  4: Mostly reactive  0: No prep
 
-B. Study Plan Construction Quality — 30 pts
-   30: 6+ FLs scheduled with dates, AAMC sequencing, weekly checklist, Week 1 daily tasks, HW Tracker link
-   22: Strong plan  15: Exists but lacks specificity  8: General advice only  0: No plan
+B. Study Plan Construction Quality — 25 pts
+   25: 6+ FLs scheduled with dates, AAMC sequencing, weekly checklist, Week 1 daily tasks, HW Tracker link
+   19: Strong plan  12: Exists but lacks specificity  6: General advice only  0: No plan
 
 C. Personalization & Load Calibration — 15 pts
    15: Adapted to availability/timeline  11: Availability acknowledged  7: Some personalization  3: Constraints mentioned  0: None
 
-D. Strategy Portion Execution — 25 pts
-   25: Student taught back; per-paragraph feedback; 3+ questions; missed reasons identified; videos recommended
-   19: Teach-back + some questions  12: Mostly tutor-led  6: Brief mention  0: No teach-back (auto 0)
+D. Strategy Portion Execution — 35 pts
+   35: Student taught back; per-paragraph feedback; 3+ questions; missed reasons identified; videos recommended
+   27: Teach-back + some questions  18: Mostly tutor-led  9: Brief mention  0: No teach-back (auto 0)
 
 E. Clarity & Student Buy-In — 10 pts
    10: Takeaways verbalized; next steps explicit; next session scheduled; HW Tracker explained

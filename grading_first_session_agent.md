@@ -1,9 +1,9 @@
 # SOP: Session 1 Grading Rubric (150-Point Architecture)
 
 ## Purpose
-This SOP defines how the grading agent evaluates Session 1 tutoring using a **150-point scoring architecture**: **SOP Compliance (60 pts)**, **Notes Quality (45 pts)**, and **Transcript Coaching Quality (45 pts)**.
+This SOP defines how the grading agent evaluates Session 1 tutoring using a **150-point scoring architecture**: **SOP Compliance (50 pts)**, **Notes Quality (45 pts)**, and **Transcript Coaching Quality (55 pts)**.
 
-The goal is to assess **deliverables, documentation quality, and instructional effectiveness** with SOP as the dominant weight (40%).
+The goal is to assess **deliverables, documentation quality, and instructional effectiveness** with coaching and SOP equally weighted.
 
 ---
 
@@ -11,9 +11,9 @@ The goal is to assess **deliverables, documentation quality, and instructional e
 
 | Section | What It Grades | Points | % of Total |
 |---------|----------------|--------|------------|
-| Section 2: SOP Compliance Checklist | Binary/partial pass on required session deliverables | 60 pts | 40% |
+| Section 2: SOP Compliance Checklist | Binary/partial pass on required session deliverables | 50 pts | 33% |
 | Section 3: Notes Quality (A–C) | Quality of tutor's written notes | 45 pts | 30% |
-| Section 4: Transcript Coaching Quality (D–E) | In-session teaching behavior from transcript | 45 pts | 30% |
+| Section 4: Transcript Coaching Quality (D–E) | In-session teaching behavior from transcript | 55 pts | 37% |
 | **TOTAL** | | **150 pts** | 100% |
 
 **Scaled score:** `(raw_total / 150) * 100` → 0–100.  
@@ -38,7 +38,7 @@ The tutor must close every session by asking the student: *"What were your major
 
 ---
 
-## Section 3: Notes Quality (45 pts) — Anchors
+## Section 3: Notes Quality (45 pts, unchanged) — Anchors
 
 ### A. Preparation & Planning Readiness (0–15)
 - **13–15:** Test date, baseline, course enrollment, prioritized below-average topics; pre-session review evident.
@@ -63,27 +63,27 @@ The tutor must close every session by asking the student: *"What were your major
 
 ---
 
-## Section 4: Transcript Coaching Quality (45 pts) — Anchors
+## Section 4: Transcript Coaching Quality (55 pts) — Anchors
 
-### D. Strategy Portion Execution (0–25)
+### D. Strategy Portion Execution (0–30)
 
-- **22–25:** Both CARS and science strategy; strong teach-back; checks understanding throughout.
-- **17–21:** Good coverage with feedback and application; may lean one section.
-- **12–16:** Strategy discussed but mostly tutor-led.
-- **7–11:** Brief or abstract strategy only.
-- **0–6:** No meaningful strategy instruction.
+- **26–30:** Both CARS and science strategy; strong teach-back; checks understanding throughout.
+- **20–25:** Good coverage with feedback and application; may lean one section.
+- **14–19:** Strategy discussed but mostly tutor-led.
+- **8–13:** Brief or abstract strategy only.
+- **0–7:** No meaningful strategy instruction.
 
-**Strategy balance rule:** If the tutor covers **only CARS or only science** (not both), **cap this category at 18/25** maximum.
+**Strategy balance rule:** If the tutor covers **only CARS or only science** (not both), **cap this category at 22/30** maximum.
 
-### E. Student-Led Learning & Probing Questions (0–20)
+### E. Student-Led Learning & Probing Questions (0–25)
 
 **What it measures:** Whether the tutor facilitates learning through probing questions; the student should be doing the thinking, not just receiving answers.
 
-- **18–20:** Tutor consistently uses probing questions; student visibly doing the work; tutor corrects by asking, not telling.
-- **14–17:** Regular checks for understanding; some teach-back; balanced with instruction.
-- **10–13:** Mix of probing and direct instruction; tutor sometimes answers own questions.
-- **6–9:** Mostly explains/lectures; questions rare or surface-level (yes/no).
-- **0–5:** Tutor takes over thinking; student passive throughout.
+- **22–25:** Tutor consistently uses probing questions; student visibly doing the work; tutor corrects by asking, not telling.
+- **17–21:** Regular checks for understanding; some teach-back; balanced with instruction.
+- **12–16:** Mix of probing and direct instruction; tutor sometimes answers own questions.
+- **7–11:** Mostly explains/lectures; questions rare or surface-level (yes/no).
+- **0–6:** Tutor takes over thinking; student passive throughout.
 
 **Positive signals:** "What do you think?" / "Why is that?" / "How would you approach this?" / hint then wait / student explains back / "Does that make sense?" with follow-up.
 
@@ -94,9 +94,9 @@ The tutor must close every session by asking the student: *"What were your major
 ## Final Evaluation Output
 
 Agent should return:
-- **SOP total (0–60)** with per-item scores and evidence
+- **SOP total (0–50)** with per-item scores and evidence
 - **Notes total (0–45)** with A, B, C scores and justification
-- **Coaching total (0–45)** with D, E scores and justification (strategy cap applied when applicable)
+- **Coaching total (0–55)** with D, E scores and justification (strategy cap applied when applicable)
 - **Raw total (0–150)** and **Scaled score (0–100)**
 - **Overall rating:** Exceeds | Meets | Coach | Remediate
 - Per-section justifications and missing items; tutor feedback (what went well, areas for improvement)
@@ -107,7 +107,7 @@ Agent should return:
 - Score holistically; favor demonstrated intent over exact phrasing.
 - When uncertain, score conservatively.
 - Always check transcript for Major Takeaways in the **last 20%** of the session.
-- Apply the Strategy cap (18/25 max) when only one of CARS or science strategy is covered.
+- Apply the Strategy cap (22/30 max) when only one of CARS or science strategy is covered.
 
 ---
 

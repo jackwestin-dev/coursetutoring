@@ -399,12 +399,12 @@ class SessionGrader:
         }
 
     def grade(self):
-        """Run comprehensive grading using 150-point architecture: SOP 60, Notes 45, Coaching 45."""
+        """Run comprehensive grading using 150-point architecture: SOP 50, Notes 45, Coaching 55."""
         info = self.extract_info()
         notes_check = self.check_notes_present()
         probing = self._detect_probing_questions()
 
-        # Initialize new score dict (Section 2: SOP 60, Section 3: Notes 45, Section 4: Coaching 45)
+        # Initialize new score dict (Section 2: SOP 50, Section 3: Notes 45, Section 4: Coaching 55)
         self.scores = {
             'sop_exam_schedule': 0, 'sop_aamc_deadlines': 0, 'sop_below_avg_topics': 0,
             'sop_weekly_checklist': 0, 'sop_daily_tasks': 0, 'sop_strategy_notes': 0,
@@ -415,36 +415,36 @@ class SessionGrader:
         self.justifications = {}
         self.missing_items = {}
 
-        # --- Section 2: SOP Compliance (60 pts) ---
-        # 1. Exam schedule: 10 full, 5 partial, 0 missing
+        # --- Section 2: SOP Compliance (50 pts) ---
+        # 1. Exam schedule: 8 full, 4 partial, 0 missing
         if notes_check['exam_schedule']['status'] == 'Yes':
-            self.scores['sop_exam_schedule'] = 10
+            self.scores['sop_exam_schedule'] = 8
         elif notes_check['exam_schedule']['status'] == 'Partial':
-            self.scores['sop_exam_schedule'] = 5
-        # 2. AAMC deadlines: 10 full, 5 if referenced but no deadlines, 0
+            self.scores['sop_exam_schedule'] = 4
+        # 2. AAMC deadlines: 8 full, 4 if referenced but no deadlines, 0
         if notes_check['aamc_sequencing']['status'] == 'Yes':
-            self.scores['sop_aamc_deadlines'] = 10
+            self.scores['sop_aamc_deadlines'] = 8
         elif notes_check['aamc_sequencing']['status'] == 'Partial':
-            self.scores['sop_aamc_deadlines'] = 5
-        # 3. Below-average topics: 10 full, 5 partial, 0
+            self.scores['sop_aamc_deadlines'] = 4
+        # 3. Below-average topics: 8 full, 4 partial, 0
         if notes_check['below_avg_topics']['status'] == 'Yes':
-            self.scores['sop_below_avg_topics'] = 10
+            self.scores['sop_below_avg_topics'] = 8
         elif notes_check['below_avg_topics']['status'] == 'Partial':
-            self.scores['sop_below_avg_topics'] = 5
-        # 4. Weekly checklist: 8 or 0
-        self.scores['sop_weekly_checklist'] = 8 if notes_check['weekly_checklist']['status'] in ('Yes', 'Partial') else 0
-        # 5. Daily tasks: 8 full, 4 partial, 0
+            self.scores['sop_below_avg_topics'] = 4
+        # 4. Weekly checklist: 7 or 0
+        self.scores['sop_weekly_checklist'] = 7 if notes_check['weekly_checklist']['status'] in ('Yes', 'Partial') else 0
+        # 5. Daily tasks: 7 full, 4 partial, 0
         if notes_check['daily_tasks']['status'] == 'Yes':
-            self.scores['sop_daily_tasks'] = 8
+            self.scores['sop_daily_tasks'] = 7
         elif notes_check['daily_tasks']['status'] == 'Partial':
             self.scores['sop_daily_tasks'] = 4
-        # 6. Strategy notes: 7 full, 3-4 brief, 0
+        # 6. Strategy notes: 6 full, 3 brief, 0
         if notes_check['strategy_notes']['status'] == 'Yes':
-            self.scores['sop_strategy_notes'] = 7
+            self.scores['sop_strategy_notes'] = 6
         elif notes_check['strategy_notes']['status'] == 'Partial':
-            self.scores['sop_strategy_notes'] = 4
-        # 7. Next session: 4 or 0
-        self.scores['sop_next_session'] = 4 if notes_check['next_session']['status'] in ('Yes', 'Partial') else 0
+            self.scores['sop_strategy_notes'] = 3
+        # 7. Next session: 3 or 0
+        self.scores['sop_next_session'] = 3 if notes_check['next_session']['status'] in ('Yes', 'Partial') else 0
         # 8. Major takeaways (from transcript, binary)
         self.scores['sop_major_takeaways'] = 3 if notes_check['sop_major_takeaways']['status'] == 'Yes' else 0
 
@@ -491,39 +491,39 @@ class SessionGrader:
         self.justifications['notes_personalization'] = "Personalization: availability, constraints, workload calibration."
         self.missing_items['notes_personalization'] = ["Weekly study hours", "Pacing for timeline"] if not (info['has_classes'] or info['has_work']) else []
 
-        # --- Section 4: Transcript Coaching Quality (45 pts) ---
-        # D. Strategy Portion Execution 0-25 (cap 18 if only CARS or only science)
+        # --- Section 4: Transcript Coaching Quality (55 pts) ---
+        # D. Strategy Portion Execution 0-30 (cap 22 if only CARS or only science)
         has_cars = bool(re.search(r'(?:mapping|main idea|CARS passage|argument|author.*opinion|reference to authority|contrast word)', self.transcript, re.I))
         has_science = bool(re.search(r'(?:science passage|experimental passage|reference.*table|unit analysis|figure|graph|TAQT|buzz\s*word|discrete)', self.transcript, re.I))
         both_covered = has_cars and has_science
         strategy_raw = 0
         if info['has_strategy']:
-            strategy_raw += 8
+            strategy_raw += 10
         if len(info['topics_discussed']) >= 3:
-            strategy_raw += 8
+            strategy_raw += 10
         elif info['topics_discussed']:
-            strategy_raw += 5
+            strategy_raw += 6
         if info['transcript_length'] > 40000:
-            strategy_raw += 4
-        strategy_raw = min(strategy_raw, 25)
-        self.scores['coaching_strategy'] = min(strategy_raw, 18) if not both_covered else strategy_raw
+            strategy_raw += 5
+        strategy_raw = min(strategy_raw, 30)
+        self.scores['coaching_strategy'] = min(strategy_raw, 22) if not both_covered else strategy_raw
         self.justifications['coaching_strategy'] = "Strategy coverage: CARS and science both covered." if both_covered else "Strategy coverage: only one of CARS or science covered; cap applied."
         self.missing_items['coaching_strategy'] = [] if both_covered else ["Cover both CARS and science strategy for full points."]
 
-        # E. Student-Led Learning & Probing Questions 0-20
+        # E. Student-Led Learning & Probing Questions 0-25
         density = probing['probing_density']
         count = probing['positive_count']
         if count >= 8 or density >= 2.0:
-            probing_pts = 18
+            probing_pts = 23
         elif count >= 5 or density >= 1.2:
-            probing_pts = 14
+            probing_pts = 18
         elif count >= 3 or density >= 0.6:
-            probing_pts = 10
+            probing_pts = 13
         elif count >= 1:
-            probing_pts = 6
+            probing_pts = 8
         else:
-            probing_pts = 2
-        self.scores['coaching_probing'] = min(probing_pts, 20)
+            probing_pts = 3
+        self.scores['coaching_probing'] = min(probing_pts, 25)
         self.justifications['coaching_probing'] = "Probing questions and student-led learning: {} signals in transcript.".format(count)
         self.missing_items['coaching_probing'] = ["Use more probing questions; have student explain back."] if probing_pts < 10 else []
 
@@ -557,13 +557,13 @@ class SessionGrader:
     
     def _get_biggest_risk(self):
         """Determine the biggest risk based on scores."""
-        if self.findings.get('sop_total', 0) < 35:
+        if self.findings.get('sop_total', 0) < 29:
             return "SOP compliance is low — student has insufficient take-home documentation (exam schedule, AAMC plan, weekly/daily tasks, or major takeaways closing)."
         if self.scores.get('sop_major_takeaways', 0) == 0:
             return "Required closing missing: tutor did not ask 'What were your major takeaways?' in the final portion of the session."
         if self.findings.get('notes_total', 0) < 25:
             return "Notes quality is weak — preparation, study plan, or personalization not adequately documented."
-        if self.findings.get('coaching_total', 0) < 25:
+        if self.findings.get('coaching_total', 0) < 31:
             return "Coaching quality gaps — strategy coverage or probing questions need improvement."
         return "Documentation and coaching gaps may impact student's ability to follow the study plan independently."
     
@@ -722,20 +722,20 @@ Top 3 Fixes
         report += """
 {sep}
 
-SECTION 2: SOP COMPLIANCE CHECKLIST (60 pts)
+SECTION 2: SOP COMPLIANCE CHECKLIST (50 pts)
 
 SOP Item                                          | Score | Max | Evidence
 --------------------------------------------------|-------|-----|---------
-Exam schedule (all FL dates documented)           | {sop_exam:2} | 10 | {exam_ev}
-AAMC deadlines/sequencing documented              | {sop_aamc:2} | 10 | {aamc_ev}
-Below-average topic review                        | {sop_topics:2} | 10 | {topics_ev}
-Weekly checklist present                          | {sop_weekly:2} |  8 | {weekly_ev}
-Daily tasks for Week 1 documented                 | {sop_daily:2} |  8 | {daily_ev}
-Strategy portion notes documented                 | {sop_strat:2} |  7 | {strat_ev}
-Next session tentatively scheduled                | {sop_next:2} |  4 | {next_ev}
+Exam schedule (all FL dates documented)           | {sop_exam:2} |  8 | {exam_ev}
+AAMC deadlines/sequencing documented              | {sop_aamc:2} |  8 | {aamc_ev}
+Below-average topic review                        | {sop_topics:2} |  8 | {topics_ev}
+Weekly checklist present                          | {sop_weekly:2} |  7 | {weekly_ev}
+Daily tasks for Week 1 documented                 | {sop_daily:2} |  7 | {daily_ev}
+Strategy portion notes documented                 | {sop_strat:2} |  6 | {strat_ev}
+Next session tentatively scheduled                | {sop_next:2} |  3 | {next_ev}
 Major Takeaways closing (transcript)              | {sop_takeaways:2} |  3 | {takeaways_ev}
 --------------------------------------------------|-------|-----|---------
-SOP Subtotal                                      | {sop_total:2} | 60 |
+SOP Subtotal                                      | {sop_total:2} | 50 |
 
 {sep}
 
@@ -756,16 +756,16 @@ Notes Subtotal                                    | {notes_total:2} | 45
 
 {sep}
 
-SECTION 4: TRANSCRIPT COACHING QUALITY (45 pts)
+SECTION 4: TRANSCRIPT COACHING QUALITY (55 pts)
 
-D. Strategy Portion Execution                     | {coach_strat:2} | 25
+D. Strategy Portion Execution                     | {coach_strat:2} | 30
 Justification: {coach_strat_just}
 Missing: {coach_strat_missing}
 
-E. Student-Led Learning & Probing Questions       | {coach_probing:2} | 20
+E. Student-Led Learning & Probing Questions       | {coach_probing:2} | 25
 Justification: {coach_probing_just}
 Missing: {coach_probing_missing}
-Coaching Subtotal                                 | {coaching_total:2} | 45
+Coaching Subtotal                                 | {coaching_total:2} | 55
 
 {sep}
 
@@ -907,22 +907,22 @@ FINAL SCORE SUMMARY
 
 Section                              | Score  | Max
 -------------------------------------|--------|-----
-SOP Compliance Checklist             | {sop_total:2}     | 60
-  — Exam schedule                    | {sop_exam:2}      | 10
-  — AAMC deadlines                   | {sop_aamc:2}      | 10
-  — Below-average topics             | {sop_topics:2}      | 10
-  — Weekly checklist                | {sop_weekly:2}      |  8
-  — Daily tasks (Week 1)             | {sop_daily:2}      |  8
-  — Strategy notes                   | {sop_strat:2}      |  7
-  — Next session scheduled           | {sop_next:2}      |  4
+SOP Compliance Checklist             | {sop_total:2}     | 50
+  — Exam schedule                    | {sop_exam:2}      |  8
+  — AAMC deadlines                   | {sop_aamc:2}      |  8
+  — Below-average topics             | {sop_topics:2}      |  8
+  — Weekly checklist                | {sop_weekly:2}      |  7
+  — Daily tasks (Week 1)             | {sop_daily:2}      |  7
+  — Strategy notes                   | {sop_strat:2}      |  6
+  — Next session scheduled           | {sop_next:2}      |  3
   — Major takeaways closing          | {sop_takeaways:2}      |  3
 Notes Quality                        | {notes_total:2}     | 45
   A. Preparation & Planning         | {notes_prep:2}     | 15
   B. Study Plan Construction         | {notes_plan:2}     | 20
   C. Personalization & Load          | {notes_personal:2}     | 10
-Transcript Coaching Quality          | {coaching_total:2}     | 45
-  D. Strategy Portion Execution      | {coach_strat:2}     | 25
-  E. Student-Led / Probing Qs        | {coach_probing:2}     | 20
+Transcript Coaching Quality          | {coaching_total:2}     | 55
+  D. Strategy Portion Execution      | {coach_strat:2}     | 30
+  E. Student-Led / Probing Qs        | {coach_probing:2}     | 25
 -------------------------------------|--------|-----
 RAW TOTAL                            | {raw_total:3}    | 150
 SCALED SCORE                         | {scaled_score:2}/100
@@ -940,7 +940,7 @@ Recommended Actions:
 {sep}
 
 Graded by: JW Session Notes Grader Agent
-Grading Agent Version: 2.0 (150-point architecture)
+Grading Agent Version: 2.1 (150-point architecture, rebalanced weights)
 Reference Documents: first_session_sop_agent.md, grading_first_session_agent.md, session_1_grading_agent.md
 """.format(
             tutor=self.tutor_name.split()[0] if self.tutor_name else 'Tutor',
@@ -1713,7 +1713,7 @@ def get_html():
                 
                 if (json.success) {
                     result.className = 'result success';
-                    result.innerHTML = '<strong>Grading Complete!</strong><br>Score: ' + json.scaled_score + '/100 — <em>' + json.overall_rating + '</em><br>Raw: ' + json.raw_total + '/150 (SOP: ' + json.sop_total + '/60 | Notes: ' + json.notes_total + '/45 | Coaching: ' + json.coaching_total + '/45)<br>Email sent: ' + (json.email_sent ? 'Yes' : 'No - check email config');
+                    result.innerHTML = '<strong>Grading Complete!</strong><br>Score: ' + json.scaled_score + '/100 — <em>' + json.overall_rating + '</em><br>Raw: ' + json.raw_total + '/150 (SOP: ' + json.sop_total + '/50 | Notes: ' + json.notes_total + '/45 | Coaching: ' + json.coaching_total + '/55)<br>Email sent: ' + (json.email_sent ? 'Yes' : 'No - check email config');
                     report.textContent = json.report;
                     report.style.display = 'block';
                 } else {
