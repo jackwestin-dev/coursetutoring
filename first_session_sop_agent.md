@@ -127,6 +127,7 @@ Tutor must:
 - Tutor assigns a passage early in the session
 - Tutor references AAMC material
 - Tutor checks student understanding mid-session
+- **Dual-source rule:** If the student notes document confirms AAMC materials were assigned/scheduled (e.g., "yes" to all AAMC documents), credit the tutor even if the transcript does not mention every AAMC assignment explicitly
 
 ---
 
@@ -195,7 +196,7 @@ Tutor must focus on:
 - Missing baseline discussion
 - No documentation mentioned
 - No schedule created
-- No AAMC passage work
+- No AAMC passage work (flag only if BOTH transcript and student notes document lack evidence)
 - No exam planning
 
 ---

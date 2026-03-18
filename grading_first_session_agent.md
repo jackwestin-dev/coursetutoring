@@ -24,7 +24,7 @@ The goal is to assess **deliverables, documentation quality, and instructional e
 ## Required Session 1 Documentation (SOP + Notes)
 
 - Exam schedule (all FL dates documented)
-- AAMC deadlines or sequencing
+- AAMC deadlines or sequencing (dual-source: credit if confirmed in transcript OR student notes document)
 - Below-average topics (excluding course-covered content)
 - Weekly checklist
 - Daily tasks for Week 1
@@ -108,6 +108,7 @@ Agent should return:
 - When uncertain, score conservatively.
 - Always check transcript for Major Takeaways in the **last 20%** of the session.
 - Apply the Strategy cap (18/25 max) when only one of CARS or science strategy is covered.
+- **AAMC dual-source rule:** For AAMC deadlines/sequencing, check BOTH the transcript AND the student notes document. If EITHER source confirms AAMC materials were assigned/scheduled/completed, award full credit. Only deduct if BOTH sources fail to confirm.
 
 ---
 

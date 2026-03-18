@@ -7,6 +7,7 @@ CORE GRADING RULES
 1. Grade the NOTES primarily. Transcript reveals what SHOULD be documented and assesses live coaching quality.
 2. Evidence must be explicit. No credit for implied content. Partial credit when partial documentation exists.
 3. Score conservatively when uncertain.
+4. AAMC DUAL-SOURCE RULE: For AAMC scheduling/sequencing, check BOTH the transcript AND the student notes document. If EITHER source confirms AAMC materials were assigned/scheduled/completed, award full credit. Only deduct if BOTH sources fail to confirm. The student notes document saying "yes" to assigning all AAMC documents is sufficient on its own.
 
 SESSION 1 RUBRIC — Onboarding & Plan Build (100 pts documentation + 50 pts coaching = 150 total, scaled to 100)
 PASS/FAIL GATES: Session Notes Template copied and completed | Strategy Portion completed (teach-back occurred) | Study Plan updated | Fathom summary forwarded (mark Unable to Verify)
@@ -141,6 +142,7 @@ UNIVERSAL RULES (all sessions)
 - Any category without concrete evidence loses 50% of its points.
 - Strategy Portion receives 0 points if teach-back does not occur.
 - Missing any Pass/Fail Gate → Needs Remediation regardless of score.
+- AAMC DUAL-SOURCE RULE: For AAMC scheduling/deadlines, check BOTH the transcript AND the student notes document. If EITHER source confirms AAMC materials were assigned/scheduled/completed, award full credit. Only deduct if BOTH sources fail to confirm. The student notes document saying "yes" to assigning all AAMC documents is sufficient on its own.
 
 PASS/FAIL GATES (missing any = Needs Remediation):
 Session Notes Template copied and completed | Strategy Portion completed (teach-back occurred) | Study Plan updated | Fathom summary forwarded to Molly Kielty and Anastasia (mark Unable to Verify if not evidenced)
