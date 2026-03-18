@@ -399,12 +399,12 @@ class SessionGrader:
         }
 
     def grade(self):
-        """Run comprehensive grading using 150-point architecture: SOP 60, Notes 45, Coaching 45."""
+        """Run comprehensive grading using 150-point architecture: SOP 60, Notes 30, Coaching 60."""
         info = self.extract_info()
         notes_check = self.check_notes_present()
         probing = self._detect_probing_questions()
 
-        # Initialize new score dict (Section 2: SOP 60, Section 3: Notes 45, Section 4: Coaching 45)
+        # Initialize new score dict (Section 2: SOP 60, Section 3: Notes 30, Section 4: Coaching 60)
         self.scores = {
             'sop_exam_schedule': 0, 'sop_aamc_deadlines': 0, 'sop_below_avg_topics': 0,
             'sop_weekly_checklist': 0, 'sop_daily_tasks': 0, 'sop_strategy_notes': 0,
@@ -448,82 +448,82 @@ class SessionGrader:
         # 8. Major takeaways (from transcript, binary)
         self.scores['sop_major_takeaways'] = 3 if notes_check['sop_major_takeaways']['status'] == 'Yes' else 0
 
-        # --- Section 3: Notes Quality (45 pts) ---
-        # A. Preparation & Planning Readiness 0-15
+        # --- Section 3: Notes Quality (30 pts) ---
+        # A. Preparation & Planning Readiness 0-10
         prep_pts = 0
         if info['test_date'] != 'Not found':
-            prep_pts += 4
+            prep_pts += 3
         if info['baseline_score'] != 'Not found':
-            prep_pts += 4
+            prep_pts += 3
         if info['has_aamc']:
             prep_pts += 2
         if info['weak_chem'] or info['weak_bio']:
-            prep_pts += 3
-        self.scores['notes_preparation'] = min(prep_pts, 15)
+            prep_pts += 2
+        self.scores['notes_preparation'] = min(prep_pts, 10)
         self.justifications['notes_preparation'] = "Preparation evidence: test date, baseline, AAMC ref, weak areas."
         self.missing_items['notes_preparation'] = [x for x in ["Test date", "Baseline score", "Below-average topics"] if (x == "Test date" and info['test_date'] == 'Not found') or (x == "Baseline score" and info['baseline_score'] == 'Not found') or (x == "Below-average topics" and not (info['weak_chem'] or info['weak_bio']))]
 
-        # B. Study Plan Construction 0-20
+        # B. Study Plan Construction 0-13
         plan_pts = 0
         if notes_check['exam_schedule']['status'] != 'No':
-            plan_pts += 5
-        if notes_check['aamc_sequencing']['status'] != 'No':
-            plan_pts += 5
-        if notes_check['weekly_checklist']['status'] != 'No':
-            plan_pts += 4
-        if notes_check['daily_tasks']['status'] == 'Yes':
-            plan_pts += 6
-        elif notes_check['daily_tasks']['status'] == 'Partial':
             plan_pts += 3
-        self.scores['notes_study_plan'] = min(plan_pts, 20)
+        if notes_check['aamc_sequencing']['status'] != 'No':
+            plan_pts += 3
+        if notes_check['weekly_checklist']['status'] != 'No':
+            plan_pts += 3
+        if notes_check['daily_tasks']['status'] == 'Yes':
+            plan_pts += 4
+        elif notes_check['daily_tasks']['status'] == 'Partial':
+            plan_pts += 2
+        self.scores['notes_study_plan'] = min(plan_pts, 13)
         self.justifications['notes_study_plan'] = "Study plan structure: exam schedule, AAMC, weekly/daily tasks."
         self.missing_items['notes_study_plan'] = [k for k, v in [('Exam schedule', notes_check['exam_schedule']), ('AAMC sequencing', notes_check['aamc_sequencing']), ('Weekly checklist', notes_check['weekly_checklist']), ('Daily tasks Week 1', notes_check['daily_tasks'])] if v['status'] == 'No']
 
-        # C. Personalization & Load 0-10
+        # C. Personalization & Load 0-7
         personal_pts = 0
         if info['has_classes'] or info['has_work']:
-            personal_pts += 4
+            personal_pts += 3
         if info['has_adhd']:
-            personal_pts += 3
+            personal_pts += 2
         if notes_check['daily_tasks']['status'] != 'No' or info['has_classes']:
-            personal_pts += 3
-        self.scores['notes_personalization'] = min(personal_pts, 10)
+            personal_pts += 2
+        self.scores['notes_personalization'] = min(personal_pts, 7)
         self.justifications['notes_personalization'] = "Personalization: availability, constraints, workload calibration."
         self.missing_items['notes_personalization'] = ["Weekly study hours", "Pacing for timeline"] if not (info['has_classes'] or info['has_work']) else []
 
-        # --- Section 4: Transcript Coaching Quality (45 pts) ---
-        # D. Strategy Portion Execution 0-25 (cap 18 if only CARS or only science)
+        # --- Section 4: Transcript Coaching Quality (60 pts) ---
+        # D. Strategy Portion Execution 0-33 (cap 24 if only CARS or only science)
         has_cars = bool(re.search(r'(?:mapping|main idea|CARS passage|argument|author.*opinion|reference to authority|contrast word)', self.transcript, re.I))
         has_science = bool(re.search(r'(?:science passage|experimental passage|reference.*table|unit analysis|figure|graph|TAQT|buzz\s*word|discrete)', self.transcript, re.I))
         both_covered = has_cars and has_science
         strategy_raw = 0
         if info['has_strategy']:
-            strategy_raw += 8
+            strategy_raw += 11
         if len(info['topics_discussed']) >= 3:
-            strategy_raw += 8
+            strategy_raw += 11
         elif info['topics_discussed']:
-            strategy_raw += 5
+            strategy_raw += 7
         if info['transcript_length'] > 40000:
-            strategy_raw += 4
-        strategy_raw = min(strategy_raw, 25)
-        self.scores['coaching_strategy'] = min(strategy_raw, 18) if not both_covered else strategy_raw
+            strategy_raw += 5
+        strategy_raw = min(strategy_raw, 33)
+        self.scores['coaching_strategy'] = min(strategy_raw, 24) if not both_covered else strategy_raw
         self.justifications['coaching_strategy'] = "Strategy coverage: CARS and science both covered." if both_covered else "Strategy coverage: only one of CARS or science covered; cap applied."
         self.missing_items['coaching_strategy'] = [] if both_covered else ["Cover both CARS and science strategy for full points."]
 
-        # E. Student-Led Learning & Probing Questions 0-20
+        # E. Student-Led Learning & Probing Questions 0-27
         density = probing['probing_density']
         count = probing['positive_count']
         if count >= 8 or density >= 2.0:
-            probing_pts = 18
+            probing_pts = 24
         elif count >= 5 or density >= 1.2:
-            probing_pts = 14
+            probing_pts = 19
         elif count >= 3 or density >= 0.6:
-            probing_pts = 10
+            probing_pts = 13
         elif count >= 1:
-            probing_pts = 6
+            probing_pts = 7
         else:
             probing_pts = 2
-        self.scores['coaching_probing'] = min(probing_pts, 20)
+        self.scores['coaching_probing'] = min(probing_pts, 27)
         self.justifications['coaching_probing'] = "Probing questions and student-led learning: {} signals in transcript.".format(count)
         self.missing_items['coaching_probing'] = ["Use more probing questions; have student explain back."] if probing_pts < 10 else []
 
@@ -739,33 +739,33 @@ SOP Subtotal                                      | {sop_total:2} | 60 |
 
 {sep}
 
-SECTION 3: NOTES QUALITY (45 pts)
+SECTION 3: NOTES QUALITY (30 pts)
 
-A. Preparation & Planning Readiness               | {notes_prep:2} | 15
+A. Preparation & Planning Readiness               | {notes_prep:2} | 10
 Justification: {notes_prep_just}
 Missing: {notes_prep_missing}
 
-B. Study Plan Construction Quality                | {notes_plan:2} | 20
+B. Study Plan Construction Quality                | {notes_plan:2} | 13
 Justification: {notes_plan_just}
 Missing: {notes_plan_missing}
 
-C. Personalization & Load Calibration             | {notes_personal:2} | 10
+C. Personalization & Load Calibration             | {notes_personal:2} |  7
 Justification: {notes_personal_just}
 Missing: {notes_personal_missing}
-Notes Subtotal                                    | {notes_total:2} | 45
+Notes Subtotal                                    | {notes_total:2} | 30
 
 {sep}
 
-SECTION 4: TRANSCRIPT COACHING QUALITY (45 pts)
+SECTION 4: TRANSCRIPT COACHING QUALITY (60 pts)
 
-D. Strategy Portion Execution                     | {coach_strat:2} | 25
+D. Strategy Portion Execution                     | {coach_strat:2} | 33
 Justification: {coach_strat_just}
 Missing: {coach_strat_missing}
 
-E. Student-Led Learning & Probing Questions       | {coach_probing:2} | 20
+E. Student-Led Learning & Probing Questions       | {coach_probing:2} | 27
 Justification: {coach_probing_just}
 Missing: {coach_probing_missing}
-Coaching Subtotal                                 | {coaching_total:2} | 45
+Coaching Subtotal                                 | {coaching_total:2} | 60
 
 {sep}
 
@@ -916,13 +916,13 @@ SOP Compliance Checklist             | {sop_total:2}     | 60
   — Strategy notes                   | {sop_strat:2}      |  7
   — Next session scheduled           | {sop_next:2}      |  4
   — Major takeaways closing          | {sop_takeaways:2}      |  3
-Notes Quality                        | {notes_total:2}     | 45
-  A. Preparation & Planning         | {notes_prep:2}     | 15
-  B. Study Plan Construction         | {notes_plan:2}     | 20
-  C. Personalization & Load          | {notes_personal:2}     | 10
-Transcript Coaching Quality          | {coaching_total:2}     | 45
-  D. Strategy Portion Execution      | {coach_strat:2}     | 25
-  E. Student-Led / Probing Qs        | {coach_probing:2}     | 20
+Notes Quality                        | {notes_total:2}     | 30
+  A. Preparation & Planning         | {notes_prep:2}     | 10
+  B. Study Plan Construction         | {notes_plan:2}     | 13
+  C. Personalization & Load          | {notes_personal:2}     |  7
+Transcript Coaching Quality          | {coaching_total:2}     | 60
+  D. Strategy Portion Execution      | {coach_strat:2}     | 33
+  E. Student-Led / Probing Qs        | {coach_probing:2}     | 27
 -------------------------------------|--------|-----
 RAW TOTAL                            | {raw_total:3}    | 150
 SCALED SCORE                         | {scaled_score:2}/100
@@ -1713,7 +1713,7 @@ def get_html():
                 
                 if (json.success) {
                     result.className = 'result success';
-                    result.innerHTML = '<strong>Grading Complete!</strong><br>Score: ' + json.scaled_score + '/100 — <em>' + json.overall_rating + '</em><br>Raw: ' + json.raw_total + '/150 (SOP: ' + json.sop_total + '/60 | Notes: ' + json.notes_total + '/45 | Coaching: ' + json.coaching_total + '/45)<br>Email sent: ' + (json.email_sent ? 'Yes' : 'No - check email config');
+                    result.innerHTML = '<strong>Grading Complete!</strong><br>Score: ' + json.scaled_score + '/100 — <em>' + json.overall_rating + '</em><br>Raw: ' + json.raw_total + '/150 (SOP: ' + json.sop_total + '/60 | Notes: ' + json.notes_total + '/30 | Coaching: ' + json.coaching_total + '/60)<br>Email sent: ' + (json.email_sent ? 'Yes' : 'No - check email config');
                     report.textContent = json.report;
                     report.style.display = 'block';
                 } else {

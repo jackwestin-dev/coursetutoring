@@ -91,42 +91,42 @@ CORE GRADING RULES
 2. Evidence must be explicit. No credit for implied content. Partial credit when partial documentation exists.
 3. Score conservatively when uncertain.
 
-SESSION 1 RUBRIC — Onboarding & Plan Build (100 pts documentation + 50 pts coaching = 150 total, scaled to 100)
+SESSION 1 RUBRIC — Onboarding & Plan Build (90 pts documentation + 60 pts coaching = 150 total, scaled to 100)
 PASS/FAIL GATES: Session Notes Template copied and completed | Strategy Portion completed (teach-back occurred) | Study Plan updated | Fathom summary forwarded (mark Unable to Verify)
 
-A. Preparation & Planning Readiness — 20 pts
-   20: Test date confirmed, baseline CARS score reviewed, JW mapping principles noted, below-average areas identified
-   15: Most elements present  10: Test date/goals only  5: Mostly reactive  0: No prep
+A. Preparation & Planning Readiness — 18 pts
+   18: Test date confirmed, baseline CARS score reviewed, JW mapping principles noted, below-average areas identified
+   14: Most elements present  9: Test date/goals only  4: Mostly reactive  0: No prep
 
-B. Study Plan Construction Quality — 30 pts
-   30: 6+ FLs scheduled with dates, AAMC sequencing, weekly checklist, Week 1 daily tasks, HW Tracker link
-   22: Strong plan  15: Exists but lacks specificity  8: General advice only  0: No plan
+B. Study Plan Construction Quality — 27 pts
+   27: 6+ FLs scheduled with dates, AAMC sequencing, weekly checklist, Week 1 daily tasks, HW Tracker link
+   20: Strong plan  14: Exists but lacks specificity  7: General advice only  0: No plan
 
-C. Personalization & Load Calibration — 15 pts
-   15: Adapted to availability/timeline  11: Availability acknowledged  7: Some personalization  3: Constraints mentioned  0: None
+C. Personalization & Load Calibration — 13 pts
+   13: Adapted to availability/timeline  10: Availability acknowledged  6: Some personalization  3: Constraints mentioned  0: None
 
-D. Strategy Portion Execution — 25 pts
-   25: Student taught back; per-paragraph feedback; 3+ questions; missed reasons identified; videos recommended
-   19: Teach-back + some questions  12: Mostly tutor-led  6: Brief mention  0: No teach-back (auto 0)
+D. Strategy Portion Execution — 23 pts
+   23: Student taught back; per-paragraph feedback; 3+ questions; missed reasons identified; videos recommended
+   17: Teach-back + some questions  11: Mostly tutor-led  5: Brief mention  0: No teach-back (auto 0)
 
-E. Clarity & Student Buy-In — 10 pts
-   10: Takeaways verbalized; next steps explicit; next session scheduled; HW Tracker explained
-   7: Plan summarized  5: Clarity not verified  2: Unclear  0: None
+E. Clarity & Student Buy-In — 9 pts
+   9: Takeaways verbalized; next steps explicit; next session scheduled; HW Tracker explained
+   7: Plan summarized  4: Clarity not verified  2: Unclear  0: None
 
 SESSION 1 SOP CHECKLIST: Student Overview completed | Passage video takeaways | 6+ FL exam schedule | AAMC sequencing | Weekly checklist | Week 1 daily tasks | Strategy notes | 2+ video recs | HW Tracker link | Next session date | Fathom forwarded
 
-SESSION 2 RUBRIC — Adherence & Adjustment (100+50=150, scaled to 100)
+SESSION 2 RUBRIC — Adherence & Adjustment (90+60=150, scaled to 100)
 PASS/FAIL GATES: same as Session 1
-A. Prep & Data Review — 15 pts  B. Accountability & Reflection — 25 pts  C. Plan Adjustment Quality — 20 pts  D. Time Management Coaching — 15 pts  E. Strategy Portion Execution — 25 pts
+A. Prep & Data Review — 14 pts  B. Accountability & Reflection — 23 pts  C. Plan Adjustment Quality — 18 pts  D. Time Management Coaching — 14 pts  E. Strategy Portion Execution — 21 pts
 SESSION 2 SOP: HW Tracker status | Timed section reviewed | 5 reflection areas | Roadblocks noted | Updated schedule | Strategy notes | Next session | Fathom forwarded
 
-SESSION 3 RUBRIC — Timed Pressure & Diagnostics (100+50=150, scaled to 100)
+SESSION 3 RUBRIC — Timed Pressure & Diagnostics (90+60=150, scaled to 100)
 PASS/FAIL GATES: same as Session 1
-A. Diagnostic Design Quality — 20 pts  B. Accountability Enforcement — 20 pts  C. Timing & Accuracy Analysis — 25 pts  D. Personalized Coaching Using Visuals — 15 pts  E. Strategy Portion Execution — 20 pts
+A. Diagnostic Design Quality — 18 pts  B. Accountability Enforcement — 18 pts  C. Timing & Accuracy Analysis — 23 pts  D. Personalized Coaching Using Visuals — 13 pts  E. Strategy Portion Execution — 18 pts
 SESSION 3 SOP: Timed section assigned+done | 5 reflection areas | Timing data | Per-passage insights | Personalized timing advice | Updated plan | Test-day strategy | Fathom forwarded
 
-UNIVERSAL TEACHING QUALITY — from TRANSCRIPT (50 pts):
-A. Approachability 10pts  B. CARS Passage Framing 15pts  C. CARS Question Approach 15pts  D. Student Metacognition 10pts
+UNIVERSAL TEACHING QUALITY — from TRANSCRIPT (60 pts):
+A. Approachability 12pts  B. CARS Passage Framing 18pts  C. CARS Question Approach 18pts  D. Student Metacognition 12pts
 TUTOR MISTAKE FLAGS: >2min monologue | Re-mapping for student | Ignoring "I just guessed/silly mistake" | Ending without written next steps | Only discussing accuracy
 
 OUTPUT — produce exactly this markdown:
@@ -171,11 +171,11 @@ OUTPUT — produce exactly this markdown:
 ## SECTION 4: TRANSCRIPT COACHING QUALITY
 | Behavior | Score | Observation |
 |----------|-------|-------------|
-| Approachability | X/10 | [evidence] |
-| CARS Passage Framing | X/15 | [evidence] |
-| CARS Question Approach | X/15 | [evidence] |
-| Student Metacognition | X/10 | [evidence] |
-| **Subtotal** | **X/50** | |
+| Approachability | X/12 | [evidence] |
+| CARS Passage Framing | X/18 | [evidence] |
+| CARS Question Approach | X/18 | [evidence] |
+| Student Metacognition | X/12 | [evidence] |
+| **Subtotal** | **X/60** | |
 **Tutor Mistakes Flagged:**
 - [list or "None observed"]
 
@@ -207,7 +207,7 @@ OUTPUT — produce exactly this markdown:
 | C. [Name] | X | XX |
 | D. [Name] | X | XX |
 | E. [Name] | X | XX |
-| Teaching Quality | X | 50 |
+| Teaching Quality | X | 60 |
 | **TOTAL** | **X** | **150** |
 **Scaled Score:** X/100
 **Overall Assessment:** [rating]
