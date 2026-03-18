@@ -210,12 +210,13 @@ class FathomClient:
 
 class SessionGrader:
     """Comprehensive grading engine for Session 1 tutoring transcripts."""
-    
-    def __init__(self, transcript, student_name, tutor_name, session_date):
+
+    def __init__(self, transcript, student_name, tutor_name, session_date, student_notes=''):
         self.transcript = transcript
         self.student_name = student_name
         self.tutor_name = tutor_name
         self.session_date = session_date
+        self.student_notes = student_notes or ''
         self.scores = {}
         self.justifications = {}
         self.missing_items = {}
@@ -252,7 +253,7 @@ class SessionGrader:
         
         # Session elements
         has_fl_discussion = bool(re.search(r'(?:full.?length|FL|practice\s*(?:exam|test))', self.transcript, re.I))
-        has_aamc = bool(re.search(r'AAMC', self.transcript, re.I))
+        has_aamc = bool(re.search(r'AAMC', self.transcript, re.I)) or bool(re.search(r'AAMC', self.student_notes, re.I))
         has_strategy = bool(re.search(r'(?:strategy|approach|technique|method|how to)', self.transcript, re.I))
         has_next_session = bool(re.search(r'(?:next\s+session|see\s+you|follow.?up|two\s+or\s+three\s+weeks)', self.transcript, re.I))
         
@@ -297,18 +298,53 @@ class SessionGrader:
         }
         return info
     
+    def _check_student_notes_aamc(self):
+        """Check if student notes document confirms AAMC materials were assigned/scheduled.
+
+        The student notes document is an equally valid source of truth for AAMC
+        scheduling. If it confirms AAMC materials were assigned, that alone is
+        sufficient for full credit (dual-source rule).
+        """
+        if not self.student_notes:
+            return False
+        notes_lower = self.student_notes.lower()
+        # Look for confirmation patterns in student notes document
+        aamc_mentioned = bool(re.search(r'aamc', notes_lower))
+        if not aamc_mentioned:
+            return False
+        # Check for positive confirmation signals
+        confirmation_patterns = [
+            r'aamc.*(?:assign|scheduled|complete|yes|done|plan|sequenc|deadline)',
+            r'(?:assign|scheduled|complete|yes|done|plan|sequenc|deadline).*aamc',
+            r'(?:all|every)\s+aamc',
+            r'aamc\s+(?:fl|full.?length|section\s*bank|q.?pack)',
+        ]
+        return any(re.search(p, notes_lower) for p in confirmation_patterns)
+
     def check_notes_present(self):
         """Check which SOP items are present in documented notes/action items."""
         action_text = '\n'.join(re.findall(r'ACTION\s*ITEM[:\s]+([^\n]+)', self.transcript, re.I))
-        
+
+        # AAMC dual-source rule: check both action items AND student notes document
+        student_doc_confirms_aamc = self._check_student_notes_aamc()
+        if student_doc_confirms_aamc:
+            aamc_status = 'Yes'
+            aamc_evidence = 'Student notes document confirms AAMC materials assigned/scheduled'
+        elif re.search(r'AAMC', action_text, re.I):
+            aamc_status = 'Partial'
+            aamc_evidence = self._get_evidence(action_text, r'AAMC[^.]*') or 'AAMC referenced in notes'
+        else:
+            aamc_status = 'No'
+            aamc_evidence = '(Not documented)'
+
         checks = {
             'exam_schedule': {
                 'status': 'Partial' if re.search(r'FL|full.?length|Feb\s*\d', action_text, re.I) else 'No',
                 'evidence': self._get_evidence(action_text, r'(?:FL|full.?length|practice)[^.]*') or '(Not documented)'
             },
             'aamc_sequencing': {
-                'status': 'Partial' if re.search(r'AAMC', action_text, re.I) else 'No',
-                'evidence': self._get_evidence(action_text, r'AAMC[^.]*') or '(Not documented)'
+                'status': aamc_status,
+                'evidence': aamc_evidence,
             },
             'below_avg_topics': {
                 'status': 'Partial' if re.search(r'(?:review|study|practice|action\s*potential|acid)', action_text, re.I) else 'No',
@@ -1849,7 +1885,8 @@ def grade_session():
             transcript=transcript,
             student_name=data['student_name'],
             tutor_name=data['tutor_name'],
-            session_date=data['session_date']
+            session_date=data['session_date'],
+            student_notes=data.get('student_notes', '')
         )
         
         findings = grader.grade()

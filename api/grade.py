@@ -21,12 +21,13 @@ DIRECTOR_EMAIL = os.getenv('DIRECTOR_EMAIL', 'anastasia@jackwestin.com')
 
 class SessionGrader:
     """Grader for Session 1 tutoring notes."""
-    
-    def __init__(self, transcript, student_name, tutor_name, session_date):
+
+    def __init__(self, transcript, student_name, tutor_name, session_date, student_notes=''):
         self.transcript = transcript
         self.student_name = student_name
         self.tutor_name = tutor_name
         self.session_date = session_date
+        self.student_notes = student_notes or ''
         self.findings = None
         self.scores = {}
         self.justifications = {}
@@ -101,10 +102,33 @@ class SessionGrader:
                 topics.append(topic)
         return topics
     
+    def _check_student_notes_aamc(self):
+        """Check if student notes document confirms AAMC materials were assigned/scheduled.
+
+        The student notes document is an equally valid source of truth for AAMC
+        scheduling. If it confirms AAMC materials were assigned, that alone is
+        sufficient for full credit (dual-source rule).
+        """
+        if not self.student_notes:
+            return False
+        notes_lower = self.student_notes.lower()
+        if 'aamc' not in notes_lower:
+            return False
+        confirmation_patterns = [
+            r'aamc.*(?:assign|scheduled|complete|yes|done|plan|sequenc|deadline)',
+            r'(?:assign|scheduled|complete|yes|done|plan|sequenc|deadline).*aamc',
+            r'(?:all|every)\s+aamc',
+            r'aamc\s+(?:fl|full.?length|section\s*bank|q.?pack)',
+        ]
+        return any(re.search(p, notes_lower) for p in confirmation_patterns)
+
     def check_notes_present(self):
         """Check what SOP items are in the notes."""
         text = self.transcript.lower()
-        
+
+        # AAMC dual-source rule: check both transcript AND student notes document
+        student_doc_confirms_aamc = self._check_student_notes_aamc()
+
         checks = {
             'exam_schedule': {'status': 'No', 'evidence': '(Not documented)'},
             'aamc_sequencing': {'status': 'No', 'evidence': '(Not documented)'},
@@ -116,10 +140,12 @@ class SessionGrader:
             'google_doc_shared': {'status': 'No', 'evidence': '(Not documented)'},
             'baseline_documented': {'status': 'No', 'evidence': '(Not documented)'}
         }
-        
+
         if 'fl' in text and any(w in text for w in ['schedule', 'week', 'saturday']):
             checks['exam_schedule'] = {'status': 'Partial', 'evidence': 'FL scheduling discussed verbally'}
-        if 'aamc' in text:
+        if student_doc_confirms_aamc:
+            checks['aamc_sequencing'] = {'status': 'Yes', 'evidence': 'Student notes document confirms AAMC materials assigned/scheduled'}
+        elif 'aamc' in text:
             checks['aamc_sequencing'] = {'status': 'Partial', 'evidence': 'AAMC mentioned in discussion'}
         if any(w in text for w in ['weak', 'below', 'struggle', 'hard']):
             checks['below_avg_topics'] = {'status': 'Partial', 'evidence': 'Weak areas discussed'}
@@ -865,7 +891,8 @@ class handler(BaseHTTPRequestHandler):
                 transcript=data['transcript'],
                 student_name=data['student_name'],
                 tutor_name=data['tutor_name'],
-                session_date=data['session_date']
+                session_date=data['session_date'],
+                student_notes=data.get('student_notes', '')
             )
             
             findings = grader.grade()
