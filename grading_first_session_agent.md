@@ -1,9 +1,9 @@
 # SOP: Session 1 Grading Rubric (150-Point Architecture)
 
 ## Purpose
-This SOP defines how the grading agent evaluates Session 1 tutoring using a **150-point scoring architecture**: **SOP Compliance (60 pts)**, **Notes Quality (45 pts)**, and **Transcript Coaching Quality (45 pts)**.
+This SOP defines how the grading agent evaluates Session 1 tutoring using a **150-point scoring architecture**: **SOP Compliance (60 pts)**, **Notes Quality (30 pts)**, and **Transcript Coaching Quality (60 pts)**.
 
-The goal is to assess **deliverables, documentation quality, and instructional effectiveness** with SOP as the dominant weight (40%).
+The goal is to assess **deliverables, documentation quality, and instructional effectiveness** with SOP and Coaching as co-dominant weights (40% each).
 
 ---
 
@@ -12,8 +12,8 @@ The goal is to assess **deliverables, documentation quality, and instructional e
 | Section | What It Grades | Points | % of Total |
 |---------|----------------|--------|------------|
 | Section 2: SOP Compliance Checklist | Binary/partial pass on required session deliverables | 60 pts | 40% |
-| Section 3: Notes Quality (A–C) | Quality of tutor's written notes | 45 pts | 30% |
-| Section 4: Transcript Coaching Quality (D–E) | In-session teaching behavior from transcript | 45 pts | 30% |
+| Section 3: Notes Quality (A–C) | Quality of tutor's written notes | 30 pts | 20% |
+| Section 4: Transcript Coaching Quality (D–E) | In-session teaching behavior from transcript | 60 pts | 40% |
 | **TOTAL** | | **150 pts** | 100% |
 
 **Scaled score:** `(raw_total / 150) * 100` → 0–100.  
@@ -38,52 +38,52 @@ The tutor must close every session by asking the student: *"What were your major
 
 ---
 
-## Section 3: Notes Quality (45 pts) — Anchors
+## Section 3: Notes Quality (30 pts) — Anchors
 
-### A. Preparation & Planning Readiness (0–15)
-- **13–15:** Test date, baseline, course enrollment, prioritized below-average topics; pre-session review evident.
-- **10–12:** Most elements documented; some confirmed live.
-- **7–9:** Test date and goals; limited baseline analysis.
-- **4–6:** Minimal context; notes reactive.
-- **0–3:** No preparation evidence in documentation.
+### A. Preparation & Planning Readiness (0–10)
+- **9–10:** Test date, baseline, course enrollment, prioritized below-average topics; pre-session review evident.
+- **7–8:** Most elements documented; some confirmed live.
+- **5–6:** Test date and goals; limited baseline analysis.
+- **3–4:** Minimal context; notes reactive.
+- **0–2:** No preparation evidence in documentation.
 
-### B. Study Plan Construction (0–20)
-- **17–20:** Complete plan: exam schedule, AAMC sequencing, weekly checklist, Week 1 daily tasks.
-- **13–16:** Strong structure; some elements high-level.
-- **9–12:** Plan exists but vague timelines or specificity lacking.
-- **5–8:** General advice only; no structured schedule.
-- **0–4:** No actionable plan in documentation.
+### B. Study Plan Construction (0–13)
+- **11–13:** Complete plan: exam schedule, AAMC sequencing, weekly checklist, Week 1 daily tasks.
+- **9–10:** Strong structure; some elements high-level.
+- **6–8:** Plan exists but vague timelines or specificity lacking.
+- **3–5:** General advice only; no structured schedule.
+- **0–2:** No actionable plan in documentation.
 
-### C. Personalization & Load (0–10)
-- **9–10:** Plan explicitly adapted for availability, work/school, accommodations, pacing.
-- **7–8:** Availability acknowledged; workload adjusted in notes.
-- **5–6:** Minimal personalization; plan generic.
-- **3–4:** Constraints mentioned but not reflected in plan.
-- **0–2:** No discussion of time, capacity, or constraints in notes.
+### C. Personalization & Load (0–7)
+- **6–7:** Plan explicitly adapted for availability, work/school, accommodations, pacing.
+- **5:** Availability acknowledged; workload adjusted in notes.
+- **3–4:** Minimal personalization; plan generic.
+- **2:** Constraints mentioned but not reflected in plan.
+- **0–1:** No discussion of time, capacity, or constraints in notes.
 
 ---
 
-## Section 4: Transcript Coaching Quality (45 pts) — Anchors
+## Section 4: Transcript Coaching Quality (60 pts) — Anchors
 
-### D. Strategy Portion Execution (0–25)
+### D. Strategy Portion Execution (0–33)
 
-- **22–25:** Both CARS and science strategy; strong teach-back; checks understanding throughout.
-- **17–21:** Good coverage with feedback and application; may lean one section.
-- **12–16:** Strategy discussed but mostly tutor-led.
-- **7–11:** Brief or abstract strategy only.
-- **0–6:** No meaningful strategy instruction.
+- **29–33:** Both CARS and science strategy; strong teach-back; checks understanding throughout.
+- **23–28:** Good coverage with feedback and application; may lean one section.
+- **16–22:** Strategy discussed but mostly tutor-led.
+- **9–15:** Brief or abstract strategy only.
+- **0–8:** No meaningful strategy instruction.
 
-**Strategy balance rule:** If the tutor covers **only CARS or only science** (not both), **cap this category at 18/25** maximum.
+**Strategy balance rule:** If the tutor covers **only CARS or only science** (not both), **cap this category at 24/33** maximum.
 
-### E. Student-Led Learning & Probing Questions (0–20)
+### E. Student-Led Learning & Probing Questions (0–27)
 
 **What it measures:** Whether the tutor facilitates learning through probing questions; the student should be doing the thinking, not just receiving answers.
 
-- **18–20:** Tutor consistently uses probing questions; student visibly doing the work; tutor corrects by asking, not telling.
-- **14–17:** Regular checks for understanding; some teach-back; balanced with instruction.
-- **10–13:** Mix of probing and direct instruction; tutor sometimes answers own questions.
-- **6–9:** Mostly explains/lectures; questions rare or surface-level (yes/no).
-- **0–5:** Tutor takes over thinking; student passive throughout.
+- **24–27:** Tutor consistently uses probing questions; student visibly doing the work; tutor corrects by asking, not telling.
+- **19–23:** Regular checks for understanding; some teach-back; balanced with instruction.
+- **13–18:** Mix of probing and direct instruction; tutor sometimes answers own questions.
+- **7–12:** Mostly explains/lectures; questions rare or surface-level (yes/no).
+- **0–6:** Tutor takes over thinking; student passive throughout.
 
 **Positive signals:** "What do you think?" / "Why is that?" / "How would you approach this?" / hint then wait / student explains back / "Does that make sense?" with follow-up.
 
@@ -95,8 +95,8 @@ The tutor must close every session by asking the student: *"What were your major
 
 Agent should return:
 - **SOP total (0–60)** with per-item scores and evidence
-- **Notes total (0–45)** with A, B, C scores and justification
-- **Coaching total (0–45)** with D, E scores and justification (strategy cap applied when applicable)
+- **Notes total (0–30)** with A, B, C scores and justification
+- **Coaching total (0–60)** with D, E scores and justification (strategy cap applied when applicable)
 - **Raw total (0–150)** and **Scaled score (0–100)**
 - **Overall rating:** Exceeds | Meets | Coach | Remediate
 - Per-section justifications and missing items; tutor feedback (what went well, areas for improvement)
