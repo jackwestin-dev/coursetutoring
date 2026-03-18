@@ -31,6 +31,14 @@ SMTP_USER = os.getenv('SMTP_USER', '')
 SMTP_PASSWORD = os.getenv('SMTP_PASSWORD', '')
 DIRECTOR_EMAIL = os.getenv('DIRECTOR_EMAIL', 'anastasia@jackwestin.com')
 FROM_EMAIL = os.getenv('FROM_EMAIL', 'grader@jackwestin.com')
+
+# Hard-coded director recipients — all grading reports go to these four
+DIRECTOR_EMAILS = [
+    "anastasia@jackwestin.com",
+    "carlb@jackwestin.com",
+    "Molly@jackwestin.com",
+    "adamrs@jackwestin.com",
+]
 FATHOM_API_KEY = os.getenv('FATHOM_API_KEY', '')
 
 
@@ -1969,7 +1977,10 @@ def grade_session():
         findings = grader.grade()
         report = grader.generate_report()
 
-        # Email sending disabled — drafts are generated but not sent
+        # Send grading report to all four directors
+        subject = 'Session Grading Report - {} (Tutor: {})'.format(
+            data['student_name'], data['tutor_name'])
+        email_sent = send_email(DIRECTOR_EMAILS, subject, report)
 
         return jsonify({
             'success': True,
@@ -1981,7 +1992,7 @@ def grade_session():
             'scaled_score': findings['scaled_score'],
             'overall_rating': findings['rating'],
             'director_email': DIRECTOR_EMAIL,
-            'email_sent': False,
+            'email_sent': email_sent,
             'report': report,
             'transcript_source': 'fathom' if recording_id else 'manual'
         })

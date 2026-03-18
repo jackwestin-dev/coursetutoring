@@ -452,7 +452,8 @@ export default function CARSGrader() {
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState(null);
   const [emails, setEmails] = useState(null);
-  // Email sending disabled — drafts are still generated for review
+  const [managementEmailSent, setManagementEmailSent] = useState(false);
+  const [managementEmailError, setManagementEmailError] = useState(null);
   const [score, setScore] = useState(null);
   const [rating, setRating] = useState(null);
   const [gradeError, setGradeError] = useState(null);
@@ -704,7 +705,7 @@ ${tutorEmailBody ? `
     if (!form.transcript.trim() || !form.studentDoc.trim()) {
       setGradeError("Please provide both the session transcript and student notes document."); return;
     }
-    setGradeError(null); setReport(null); setEmails(null); setScore(null); setRating(null); setLoading(true);
+    setGradeError(null); setReport(null); setEmails(null); setScore(null); setRating(null); setManagementEmailSent(false); setManagementEmailError(null); setLoading(true);
     try {
       const gradingPrompt = (form.courseType === "cars") ? GRADING_PROMPT : ORIGINAL_GRADING_PROMPT;
       const sopVerification = `\n\nSOP VERIFICATION (manual input — third source of truth):\n- Study schedule provided in Google Sheet: ${form.sopStudySchedule.toUpperCase()}${form.sopStudyScheduleUrl ? ` (URL: ${form.sopStudyScheduleUrl})` : ""}\n- AAMC question packs assigned: ${form.sopQuestionPacks.toUpperCase()}\n- Ten full-length exams assigned: ${form.sopFullLengthExams.toUpperCase()}\n\nSOP VERIFICATION RULES:\n- YES = full credit for that SOP sub-item\n- PARTIAL = 50% credit for that SOP sub-item\n- NO = 0 points for that SOP sub-item UNLESS the transcript or student notes confirm otherwise (other sources can override a "No")\n- These manual inputs are a fail-safe — treat them as a third source of truth alongside transcript and student notes`;
@@ -750,7 +751,34 @@ ${tutorEmailBody ? `
         parsed = { tutorEmail: { subject: `Session ${form.sessionNumber} Grading Report`, body: emailText }, managementEmail: { subject: `Session ${form.sessionNumber} QA Report`, body: emailText } };
         setEmails(parsed);
       }
-      // Email sending disabled — drafts are generated for review but not sent automatically
+      // Send management email to directors via /api/send-email
+      if (parsed?.managementEmail) {
+        try {
+          const htmlContent = buildHtmlEmail(
+            parsed.managementEmail.body,
+            gradeText,
+            { tutorName: form.tutorName, studentName: form.studentName, sessionNumber: form.sessionNumber, sessionDate: form.sessionDate, score: ps, rating: pr, courseType: form.courseType === "cars" ? "CARS Strategy" : form.courseType === "intensive" ? "Intensive" : "515+", tutorEmail: form.tutorEmail },
+            parsed.tutorEmail?.body
+          );
+          const sendRes = await fetch("/api/send-email", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              subject: parsed.managementEmail.subject,
+              body: parsed.managementEmail.body,
+              html: htmlContent,
+            }),
+          });
+          const sendJson = await sendRes.json();
+          if (sendJson.success) {
+            setManagementEmailSent(true);
+          } else {
+            setManagementEmailError(sendJson.error || "Send failed");
+          }
+        } catch (emailErr) {
+          setManagementEmailError(emailErr.message);
+        }
+      }
       // Store transcript + grading outcome for 3-day director digest
       try {
         await fetch("/api/record-session", {
@@ -954,6 +982,18 @@ ${tutorEmailBody ? `
                 <button onClick={() => navigator.clipboard.writeText(report)} style={{ padding: "8px 16px", border: "1.5px solid #8A5CF6", borderRadius: 10, background: "#fff", color: "#8A5CF6", fontSize: 12, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>Copy report</button>
               </div>
 
+              {/* Email status */}
+              {managementEmailSent && (
+                <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "11px 16px", marginBottom: 10, fontSize: 13, color: "#065f46" }}>
+                  Report emailed to directors (anastasia, carlb, Molly, adamrs)
+                </div>
+              )}
+              {managementEmailError && (
+                <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, padding: "11px 16px", marginBottom: 10, fontSize: 13, color: "#991b1b" }}>
+                  Email send failed: {managementEmailError}
+                </div>
+              )}
+
               {/* Score bands */}
               <div style={{ background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: 10, padding: "11px 16px", marginBottom: 10, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
                 <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#5E6573" }}>Score bands</span>
@@ -968,12 +1008,12 @@ ${tutorEmailBody ? `
                 <ReportRenderer text={report} />
               </div>
 
-              {/* Email drafts — tutor first, then management (draft tutor email below full report) */}
+              {/* Email drafts — tutor draft (not sent) + management email (sent to directors) */}
               {emails && (
                 <div style={{ marginBottom: 10 }}>
-                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#5E6573", marginBottom: 8 }}>Email drafts</p>
-                  <EmailPanel title="Draft Tutor Email" subtitle={`To: ${form.tutorEmail || form.tutorName || "tutor"} · Detailed grading report`} tagColor="#8A5CF6" subject={emails.tutorEmail?.subject} body={emails.tutorEmail?.body} formatBody />
-                  <EmailPanel title="Management Summary" subtitle="To: Anastasia, Molly, Carl, Adam · Triage + full tutor draft (draft only — not sent)" tagColor="#f59e0b" subject={emails.managementEmail?.subject} body={emails.managementEmail?.body} />
+                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#5E6573", marginBottom: 8 }}>Emails</p>
+                  <EmailPanel title="Draft Tutor Email" subtitle={`To: ${form.tutorEmail || form.tutorName || "tutor"} · Detailed grading report (draft only — not sent)`} tagColor="#8A5CF6" subject={emails.tutorEmail?.subject} body={emails.tutorEmail?.body} formatBody />
+                  <EmailPanel title="Management Report" subtitle={`To: Directors · ${managementEmailSent ? "Sent" : "Pending"}`} tagColor={managementEmailSent ? "#16a34a" : "#f59e0b"} subject={emails.managementEmail?.subject} body={emails.managementEmail?.body} />
                 </div>
               )}
             </div>

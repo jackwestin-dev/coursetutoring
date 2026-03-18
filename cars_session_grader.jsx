@@ -420,6 +420,8 @@ export default function CARSGrader() {
   const [score, setScore] = useState(null);
   const [rating, setRating] = useState(null);
   const [gradeError, setGradeError] = useState(null);
+  const [managementEmailSent, setManagementEmailSent] = useState(false);
+  const [managementEmailError, setManagementEmailError] = useState(null);
   const reportRef = useRef(null);
 
   // ── Fathom sync ─────────────────────────────────────────────────────────────
@@ -532,7 +534,7 @@ export default function CARSGrader() {
     if (!form.transcript.trim() || !form.studentDoc.trim()) {
       setGradeError("Please provide both the session transcript and student notes document."); return;
     }
-    setGradeError(null); setReport(null); setEmails(null); setScore(null); setRating(null); setLoading(true);
+    setGradeError(null); setReport(null); setEmails(null); setScore(null); setRating(null); setManagementEmailSent(false); setManagementEmailError(null); setLoading(true);
     try {
       const sopVerification = `\n\nSOP VERIFICATION (manual input — third source of truth):\n- Study schedule provided in Google Sheet: ${form.sopStudySchedule.toUpperCase()}${form.sopStudyScheduleUrl ? ` (URL: ${form.sopStudyScheduleUrl})` : ""}\n- AAMC question packs assigned: ${form.sopQuestionPacks.toUpperCase()}\n- Ten full-length exams assigned: ${form.sopFullLengthExams.toUpperCase()}\n\nSOP VERIFICATION RULES:\n- YES = full credit for that SOP sub-item\n- PARTIAL = 50% credit for that SOP sub-item\n- NO = 0 points for that SOP sub-item UNLESS the transcript or student notes confirm otherwise (other sources can override a "No")\n- These manual inputs are a fail-safe — treat them as a third source of truth alongside transcript and student notes`;
       const gradeText = await callClaude(GRADING_PROMPT,
@@ -555,10 +557,34 @@ export default function CARSGrader() {
       const emailText = await callClaude(EMAIL_PROMPT,
         `STUDENT: ${form.studentName||"Not provided"}\nTUTOR: ${form.tutorName||"Not provided"}\nTUTOR EMAIL: ${form.tutorEmail||"Not provided"}\nSESSION: ${form.sessionNumber}\nDATE: ${form.sessionDate}\nSCORE: ${ps}/100\nRATING: ${pr}\n\nGRADING REPORT:\n${gradeText}`
       );
+      let parsed = null;
       try {
-        setEmails(JSON.parse(emailText.replace(/```json|```/g, "").trim()));
+        parsed = JSON.parse(emailText.replace(/```json|```/g, "").trim());
+        setEmails(parsed);
       } catch {
-        setEmails({ tutorEmail: { subject: `Session ${form.sessionNumber} Grading Report`, body: emailText }, managementEmail: { subject: `Session ${form.sessionNumber} QA Report`, body: emailText } });
+        parsed = { tutorEmail: { subject: `Session ${form.sessionNumber} Grading Report`, body: emailText }, managementEmail: { subject: `Session ${form.sessionNumber} QA Report`, body: emailText } };
+        setEmails(parsed);
+      }
+      // Send management email to directors via /api/send-email
+      if (parsed?.managementEmail) {
+        try {
+          const sendRes = await fetch("/api/send-email", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              subject: parsed.managementEmail.subject,
+              body: parsed.managementEmail.body,
+            }),
+          });
+          const sendJson = await sendRes.json();
+          if (sendJson.success) {
+            setManagementEmailSent(true);
+          } else {
+            setManagementEmailError(sendJson.error || "Send failed");
+          }
+        } catch (emailErr) {
+          setManagementEmailError(emailErr.message);
+        }
       }
       setTimeout(() => reportRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
     } catch (e) { setGradeError(e.message); }
@@ -795,6 +821,18 @@ export default function CARSGrader() {
                 <button onClick={() => navigator.clipboard.writeText(report)} style={{ padding: "7px 14px", border: "1.5px solid #6c47ff", borderRadius: 8, background: "#fff", color: "#6c47ff", fontSize: 12, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>Copy report</button>
               </div>
 
+              {/* Email status */}
+              {managementEmailSent && (
+                <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "11px 16px", marginBottom: 10, fontSize: 13, color: "#065f46" }}>
+                  Report emailed to directors (anastasia, carlb, Molly, adamrs)
+                </div>
+              )}
+              {managementEmailError && (
+                <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, padding: "11px 16px", marginBottom: 10, fontSize: 13, color: "#991b1b" }}>
+                  Email send failed: {managementEmailError}
+                </div>
+              )}
+
               {/* Score bands */}
               <div style={{ background: "#fafafa", border: "1px solid #e8e8f0", borderRadius: 10, padding: "11px 16px", marginBottom: 10, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
                 <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#bbb" }}>Score bands</span>
@@ -805,9 +843,9 @@ export default function CARSGrader() {
 
               {emails && (
                 <div style={{ marginBottom: 10 }}>
-                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#aaa", marginBottom: 8 }}>Email drafts</p>
-                  <EmailPanel title="Tutor Feedback Email" subtitle={`To: ${form.tutorEmail || form.tutorName || "tutor"} · Detailed grading report`} tagColor="#6c47ff" subject={emails.tutorEmail?.subject} body={emails.tutorEmail?.body} />
-                  <EmailPanel title="Management Summary" subtitle="To: Anastasia, Molly, Carl, Adam · Triage + full tutor draft" tagColor="#f59e0b" subject={emails.managementEmail?.subject} body={emails.managementEmail?.body} />
+                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#aaa", marginBottom: 8 }}>Emails</p>
+                  <EmailPanel title="Tutor Feedback Email" subtitle={`To: ${form.tutorEmail || form.tutorName || "tutor"} · Detailed grading report (draft only — not sent)`} tagColor="#6c47ff" subject={emails.tutorEmail?.subject} body={emails.tutorEmail?.body} />
+                  <EmailPanel title="Management Report" subtitle={`To: Directors · ${managementEmailSent ? "Sent" : "Pending"}`} tagColor={managementEmailSent ? "#16a34a" : "#f59e0b"} subject={emails.managementEmail?.subject} body={emails.managementEmail?.body} />
                 </div>
               )}
 
