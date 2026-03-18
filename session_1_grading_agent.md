@@ -83,14 +83,21 @@ Tutors must schedule **10 full-length practice exams** on the student notes shee
 - "AAMC" + "exam" → full-length exam (NOT question packs)
 - The word "exam" in context of AAMC or Jack Westin → full-length exam
 
-**Full credit (12 pts):** All 10 exams scheduled with dates on the student notes sheet.
-**Partial credit (6 pts):** Some exams scheduled or discussed but not all 10 with specific dates.
-**Zero:** No evidence of FL exam scheduling.
+**CRITICAL — Default/Placeholder Date Detection:**
+The student notes sheet has a default/placeholder date of **"March 5"** (or "Mar 5", "3/5", or any variation of March 5th) pre-filled in the Planned Date column. If exams still show this date, the tutor did NOT actually schedule them — they left the default unchanged. **Exams with March 5th as the Planned Date do NOT count as scheduled.** Only exams with dates OTHER than March 5th count as properly scheduled.
+
+- If ALL or MOST exams show March 5th → treat as **zero** (no scheduling done)
+- If SOME exams show March 5th and others have real dates → only count the non-March-5th exams
+- March 5th variations to detect: "March 5", "Mar 5", "3/5", "03/05", "March 5th", "Mar 5th"
+
+**Full credit (12 pts):** All 10 exams scheduled with dates on the student notes sheet (dates must NOT be the March 5th placeholder).
+**Partial credit (6 pts):** Some exams scheduled or discussed but not all 10 with specific non-placeholder dates.
+**Zero:** No evidence of FL exam scheduling, OR all/most exams still show the March 5th default date.
 
 **Expected format on student notes:**
 ```
 Exam #  | Source           | Planned Date
-1       | JW FL 1          | [date]
+1       | JW FL 1          | [date — must NOT be "March 5" placeholder]
 2       | JW FL 2          | [date]
 ...
 7       | AAMC FL 1        | [date]
