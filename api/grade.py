@@ -18,6 +18,14 @@ SMTP_USER = (os.getenv('SMTP_USER', '') or FROM_EMAIL).strip()
 SMTP_PASSWORD = os.getenv('SMTP_PASSWORD', '')
 DIRECTOR_EMAIL = os.getenv('DIRECTOR_EMAIL', 'anastasia@jackwestin.com')
 
+# Hard-coded director recipients — all grading reports go to these four
+DIRECTOR_EMAILS = [
+    "anastasia@jackwestin.com",
+    "carlb@jackwestin.com",
+    "Molly@jackwestin.com",
+    "adamrs@jackwestin.com",
+]
+
 
 class SessionGrader:
     """Grader for Session 1 tutoring notes."""
@@ -994,7 +1002,10 @@ class handler(BaseHTTPRequestHandler):
             findings = grader.grade()
             report = grader.generate_report()
 
-            # Email sending disabled — drafts are generated but not sent
+            # Send grading report to all four directors
+            subject = 'Session Grading Report - {} (Tutor: {})'.format(
+                data['student_name'], data['tutor_name'])
+            email_sent = send_email(DIRECTOR_EMAILS, subject, report)
 
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
@@ -1004,7 +1015,7 @@ class handler(BaseHTTPRequestHandler):
                 'scores': findings['scores'],
                 'average_score': findings['average'],
                 'overall_rating': findings['rating'],
-                'email_sent': False,
+                'email_sent': email_sent,
                 'report': report
             }).encode())
             

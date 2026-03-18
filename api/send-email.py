@@ -21,24 +21,18 @@ SMTP_USER = os.environ.get("SMTP_USER", "").strip() or FROM_EMAIL
 # Strip spaces so pasted App Passwords with spaces don't break auth
 SMTP_PASSWORD = (os.environ.get("SMTP_PASSWORD", "") or "").strip().replace(" ", "")
 
+# Hard-coded director recipients — all grading reports go to these four
+DIRECTOR_EMAILS = [
+    "anastasia@jackwestin.com",
+    "carlb@jackwestin.com",
+    "Molly@jackwestin.com",
+    "adamrs@jackwestin.com",
+]
+
 
 def get_director_emails():
-    """Parse DIRECTOR_EMAILS (comma-separated) or fallback to DIRECTOR_EMAIL. Handles quotes and spaces."""
-    def parse(s):
-        if not s:
-            return []
-        s = s.strip().strip('"').strip("'")
-        return [e.strip() for e in s.split(",") if e.strip() and "@" in e]
-
-    raw = (os.environ.get("DIRECTOR_EMAILS") or "").strip()
-    if raw:
-        out = parse(raw)
-        if out:
-            return out
-    # Fallback: DIRECTOR_EMAIL (also allow comma-separated list)
-    single = (os.environ.get("DIRECTOR_EMAIL") or "anastasia@jackwestin.com").strip()
-    out = parse(single)
-    return out if out else ["anastasia@jackwestin.com"]
+    """Return the hard-coded list of director email addresses."""
+    return list(DIRECTOR_EMAILS)
 
 
 def send_email(to_emails, subject, body, html=None):
