@@ -38,6 +38,7 @@ FULL-LENGTH EXAMS vs. AAMC QUESTION PACKS — These are scored SEPARATELY:
 - AAMC Question Packs/Resources (conditional): 10 specific AAMC resources (Bio QP Vol 1&2, Chem QP, Physics QP, CARS QP Vol 1&2, Section Bank, Official Prep Hub Question Bank, CARS Diagnostic Tool, Flashcards). Only required IF student has them. Full credit if student has none.
 - Detection: "AAMC exam" = full-length exam. "AAMC question pack/section bank/flashcards" = AAMC resource.
 - Dual-source rule: Evidence from either transcript or student notes is valid.
+- CRITICAL DEFAULT DATE: The student notes sheet has a default/placeholder date of "March 5" (Mar 5, 3/5, 03/05) pre-filled in the Planned Date column. If exams show this date, the tutor did NOT schedule them — they left the default. Exams with March 5th do NOT count as scheduled. Only exams with dates OTHER than March 5th count. If all/most exams show March 5th, award zero for FL scheduling.
 
 SESSION 2 RUBRIC — Adherence & Adjustment (90+60=150, scaled to 100)
 PASS/FAIL GATES: same as Session 1
@@ -167,6 +168,7 @@ FULL-LENGTH EXAMS vs. AAMC QUESTION PACKS — scored SEPARATELY:
 - AAMC Question Packs/Resources (conditional): Bio QP Vol 1&2, Chem QP, Physics QP, CARS QP Vol 1&2, Section Bank, Official Prep Hub Question Bank, CARS Diagnostic Tool, Flashcards. Only if student has them. Full credit if student has none.
 - "AAMC exam" = full-length exam. "AAMC question pack/section bank/flashcards" = AAMC resource.
 - Dual-source rule: Evidence from either transcript or student notes is valid.
+- CRITICAL DEFAULT DATE: The student notes sheet has a default/placeholder date of "March 5" (Mar 5, 3/5, 03/05) pre-filled in the Planned Date column. If exams show this date, the tutor did NOT schedule them — they left the default. Exams with March 5th do NOT count as scheduled. Only exams with dates OTHER than March 5th count. If all/most exams show March 5th, award zero for FL scheduling.
 
 SESSION 2 — Adherence & Adjustment (90 pts + 60 teaching = 150, scaled to 100)
 A. Prep & Data Review — 14 pts: Checklist reviewed prior to meeting

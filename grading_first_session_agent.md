@@ -36,6 +36,8 @@ The goal is to assess **deliverables, documentation quality, and instructional e
 **Full-Length Exams (mandatory, 12 pts):**
 Tutors must schedule 10 full-length practice exams on the student notes sheet. Sources: Jack Westin Full Length 1–6 and AAMC exams. Detection keywords: "exam", "full length", "JW FL", "AAMC exam". Each exam should have: Exam #, Source, Planned Date.
 
+**CRITICAL — Default/Placeholder Date:** The student notes sheet has a default date of **"March 5"** (or "Mar 5", "3/5", "03/05") pre-filled in the Planned Date column. If exams still show this date, the tutor did NOT schedule them — they left the default unchanged. Exams with March 5th as the Planned Date do NOT count as scheduled. Only exams with dates other than March 5th are valid. If all/most exams show March 5th, award zero for this item.
+
 **AAMC Question Packs/Resources (conditional, 8 pts):**
 These are SEPARATE from exams. The 10 AAMC resources are:
 1. MCAT Biology Question Pack, Volume 1

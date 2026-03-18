@@ -102,6 +102,45 @@ class SessionGrader:
                 topics.append(topic)
         return topics
     
+    def _is_march5_placeholder(self, date_str):
+        """Check if a date string is the March 5th default/placeholder date.
+
+        The student notes sheet has a default date of 'March 5' pre-filled in
+        the Planned Date column. If exams still show this date, the tutor did
+        NOT actually schedule them. Returns True if the date matches any
+        variation of March 5th.
+        """
+        if not date_str:
+            return False
+        d = date_str.strip().lower()
+        march5_patterns = [
+            r'^march\s*5(?:th)?$',
+            r'^mar\s*5(?:th)?$',
+            r'^3/0?5(?:/\d{2,4})?$',
+            r'^03/05(?:/\d{2,4})?$',
+        ]
+        return any(re.search(p, d) for p in march5_patterns)
+
+    def _count_march5_exams(self, text):
+        """Count how many exam dates in the text are the March 5th placeholder.
+
+        Scans the combined transcript + notes for exam schedule entries and
+        checks if dates are the default March 5th placeholder. Returns a tuple
+        of (total_exam_dates_found, march5_count).
+        """
+        if not text:
+            return 0, 0
+        date_pattern = r'(?:march\s*5(?:th)?|mar\s*5(?:th)?|3/0?5(?:/\d{2,4})?|03/05(?:/\d{2,4})?)'
+        march5_matches = re.findall(date_pattern, text.lower())
+        march5_count = len(march5_matches)
+
+        all_dates = re.findall(
+            r'(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*\s+\d{1,2}|\d{1,2}/\d{1,2}',
+            text.lower()
+        )
+        total_dates = len(all_dates)
+        return total_dates, march5_count
+
     def _check_student_notes_aamc(self):
         """Check if student notes document confirms AAMC materials were assigned/scheduled.
 
@@ -142,9 +181,20 @@ class SessionGrader:
         }
 
         # Full-Length Exam schedule detection (JW FL, AAMC exams, full length, practice exam)
+        # Check for March 5th placeholder dates in exam schedule
+        combined_for_dates = text + ' ' + (self.student_notes or '').lower()
+        total_dates, march5_count = self._count_march5_exams(combined_for_dates)
+
         fl_keywords = ['full length', 'full-length', 'jw fl', 'jack westin fl', 'practice exam', 'aamc fl']
-        if ('fl' in text and any(w in text for w in ['schedule', 'week', 'saturday', 'date'])) or any(kw in text for kw in fl_keywords):
-            checks['fl_exam_schedule'] = {'status': 'Partial', 'evidence': 'FL exam scheduling discussed'}
+        has_fl_ref = ('fl' in text and any(w in text for w in ['schedule', 'week', 'saturday', 'date'])) or any(kw in text for kw in fl_keywords)
+        if has_fl_ref:
+            if march5_count > 0 and total_dates > 0 and march5_count >= total_dates * 0.7:
+                # Most/all exam dates are the March 5th placeholder — not actually scheduled
+                checks['fl_exam_schedule'] = {'status': 'No', 'evidence': 'Exam dates use default March 5th placeholder — not actually scheduled by tutor'}
+            elif march5_count > 0 and total_dates > march5_count:
+                checks['fl_exam_schedule'] = {'status': 'Partial', 'evidence': 'Some exams scheduled but {} of {} dates are the March 5th default placeholder'.format(march5_count, total_dates)}
+            else:
+                checks['fl_exam_schedule'] = {'status': 'Partial', 'evidence': 'FL exam scheduling discussed'}
 
         # AAMC Question Packs/Resources detection (separate from exams)
         # Dual-source rule: student notes document is equally valid evidence

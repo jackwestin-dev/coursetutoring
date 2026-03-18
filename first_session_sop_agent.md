@@ -189,6 +189,9 @@ Tutor must focus on:
 - Sources: **Jack Westin Full Length 1–6** and **AAMC exams** (remaining to total 10)
 - Each exam should have: Exam #, Source (JW FL or AAMC), Planned Date
 
+**CRITICAL — Default/Placeholder Date Detection:**
+The student notes sheet has a default/placeholder date of **"March 5"** (or "Mar 5", "3/5", "03/05") pre-filled in the Planned Date column. If exams still show this date, the tutor did NOT actually schedule them — they left the default unchanged. **Exams with March 5th as the Planned Date do NOT count as scheduled.** Only exams with dates OTHER than March 5th count as properly scheduled. If all/most exams show March 5th → treat as not scheduled (zero credit for this item).
+
 **Note:** These full-length exams are SEPARATE from AAMC question packs/resources. "AAMC exam" = full-length exam. "AAMC question pack" = separate resource (see Section 3b).
 
 **Exceptions**
@@ -199,6 +202,7 @@ Tutor must focus on:
 - Tutor references total exam count
 - Tutor acknowledges exception if applicable
 - Evidence can come from either transcript or student notes
+- **Verify that exam dates are NOT the March 5th default/placeholder date** — exams with March 5th do not count as scheduled
 
 ---
 
