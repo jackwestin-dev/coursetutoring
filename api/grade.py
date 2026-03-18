@@ -22,12 +22,16 @@ DIRECTOR_EMAIL = os.getenv('DIRECTOR_EMAIL', 'anastasia@jackwestin.com')
 class SessionGrader:
     """Grader for Session 1 tutoring notes."""
 
-    def __init__(self, transcript, student_name, tutor_name, session_date, student_notes=''):
+    def __init__(self, transcript, student_name, tutor_name, session_date, student_notes='',
+                 sop_study_schedule='no', sop_question_packs='no', sop_full_length_exams='no'):
         self.transcript = transcript
         self.student_name = student_name
         self.tutor_name = tutor_name
         self.session_date = session_date
         self.student_notes = student_notes or ''
+        self.sop_study_schedule = (sop_study_schedule or 'no').lower()
+        self.sop_question_packs = (sop_question_packs or 'no').lower()
+        self.sop_full_length_exams = (sop_full_length_exams or 'no').lower()
         self.findings = None
         self.scores = {}
         self.justifications = {}
@@ -248,20 +252,44 @@ class SessionGrader:
         self.justifications['Preparation'] = ' '.join(prep_just) + ". However, no documentation of preparation exists in the notes." if prep_just else "Limited evidence of preparation in documentation."
         self.missing_items['Preparation'] = prep_missing if prep_missing else ["Documentation of baseline review", "Prioritized topic list"]
         
-        # Study Plan score
+        # Study Plan score — incorporates SOP verification inputs as third source of truth
         plan_score = 3
         plan_just = []
         plan_missing = []
-        if notes_check['fl_exam_schedule']['status'] != 'No':
+        # Full-length exams: check notes/transcript OR SOP verification
+        fl_confirmed = notes_check['fl_exam_schedule']['status'] != 'No'
+        if not fl_confirmed and self.sop_full_length_exams == 'yes':
+            fl_confirmed = True
+            plan_just.append("Full-length exams confirmed via SOP verification (YES)")
+        elif not fl_confirmed and self.sop_full_length_exams == 'partial':
+            plan_score += 1  # 50% credit
+            plan_just.append("Full-length exams partially confirmed via SOP verification (PARTIAL)")
+        if fl_confirmed:
             plan_score += 2
-            plan_just.append("Some FL exam scheduling discussed")
+            if "Full-length exams confirmed via SOP verification" not in ' '.join(plan_just):
+                plan_just.append("Some FL exam scheduling discussed")
         else:
             plan_missing.append("Full-length exam schedule with dates (10 exams: JW FL 1-6 + AAMC exams)")
-        if notes_check['aamc_question_packs']['status'] != 'No':
+        # AAMC question packs: check notes/transcript OR SOP verification
+        aamc_confirmed = notes_check['aamc_question_packs']['status'] != 'No'
+        if not aamc_confirmed and self.sop_question_packs == 'yes':
+            aamc_confirmed = True
+            plan_just.append("AAMC question packs confirmed via SOP verification (YES)")
+        elif not aamc_confirmed and self.sop_question_packs == 'partial':
+            plan_score += 1  # partial credit
+            plan_just.append("AAMC question packs partially confirmed via SOP verification (PARTIAL)")
+        if aamc_confirmed:
             plan_score += 1
-            plan_just.append("AAMC question packs/resources referenced")
+            if "AAMC question packs confirmed via SOP verification" not in ' '.join(plan_just):
+                plan_just.append("AAMC question packs/resources referenced")
         else:
             plan_missing.append("AAMC question packs/resources scheduling (if student has them)")
+        # Study schedule: check SOP verification
+        if self.sop_study_schedule == 'yes':
+            plan_score += 1
+            plan_just.append("Study schedule confirmed via SOP verification (YES)")
+        elif self.sop_study_schedule == 'partial':
+            plan_just.append("Study schedule partially confirmed via SOP verification (PARTIAL)")
         if notes_check['weekly_checklist']['status'] != 'No':
             plan_score += 2
         else:
@@ -957,16 +985,17 @@ class handler(BaseHTTPRequestHandler):
                 student_name=data['student_name'],
                 tutor_name=data['tutor_name'],
                 session_date=data['session_date'],
-                student_notes=data.get('student_notes', '')
+                student_notes=data.get('student_notes', ''),
+                sop_study_schedule=data.get('sop_study_schedule', 'no'),
+                sop_question_packs=data.get('sop_question_packs', 'no'),
+                sop_full_length_exams=data.get('sop_full_length_exams', 'no'),
             )
-            
+
             findings = grader.grade()
             report = grader.generate_report()
-            
-            recipients = [data['tutor_email'], DIRECTOR_EMAIL]
-            subject = "Session 1 Grading: {} - {}".format(data['student_name'], findings['rating'])
-            email_sent = send_email(recipients, subject, report)
-            
+
+            # Email sending disabled — drafts are generated but not sent
+
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.end_headers()
@@ -975,7 +1004,7 @@ class handler(BaseHTTPRequestHandler):
                 'scores': findings['scores'],
                 'average_score': findings['average'],
                 'overall_rating': findings['rating'],
-                'email_sent': email_sent,
+                'email_sent': False,
                 'report': report
             }).encode())
             

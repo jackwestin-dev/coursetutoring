@@ -232,6 +232,23 @@ The student notes sheet has a default/placeholder date of **"March 5"** (or "Mar
 
 ---
 
+## SOP Verification Inputs (Third Source of Truth)
+
+The grader UI may provide manual SOP verification inputs for three key items:
+
+| Field | What It Confirms | Scoring |
+|-------|-----------------|---------|
+| Study schedule in Google Sheet | Study schedule was created and shared | YES = full credit, PARTIAL = 50%, NO = 0 (unless transcript/notes confirm) |
+| AAMC question packs assigned | AAMC question packs have been assigned/scheduled | YES = full credit, PARTIAL = 50%, NO = 0 (unless transcript/notes confirm) |
+| Ten full-length exams assigned | All 10 FL exams have been scheduled | YES = full credit, PARTIAL = 50%, NO = 0 (unless transcript/notes confirm) |
+
+**Rules:**
+- These inputs are a fail-safe — they provide human confirmation when the AI might miss something in the transcript/notes.
+- Any source (transcript, student notes, OR SOP verification) confirming an item can override a "No" from another source.
+- If SOP verification says YES but transcript/notes say otherwise, trust the human input (YES wins).
+
+---
+
 ## Notes for Cursor Agent
 - Exact wording is not required
 - Conceptual alignment is sufficient

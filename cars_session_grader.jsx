@@ -90,6 +90,7 @@ CORE GRADING RULES
 1. Grade the NOTES primarily. Transcript reveals what SHOULD be documented and assesses live coaching quality.
 2. Evidence must be explicit. No credit for implied content. Partial credit when partial documentation exists.
 3. Score conservatively when uncertain.
+4. SOP VERIFICATION INPUTS (THIRD SOURCE OF TRUTH): The grader may provide manual SOP verification inputs for: study schedule, AAMC question packs, and full-length exams. These are a fail-safe alongside transcript and student notes. Scoring: YES = full credit for that sub-item, PARTIAL = 50% credit, NO = 0 points UNLESS transcript or student notes confirm otherwise. Any source confirming the item can override a "No" from another source.
 
 SESSION 1 RUBRIC — Onboarding & Plan Build (90 pts documentation + 60 pts coaching = 150 total, scaled to 100)
 PASS/FAIL GATES: Session Notes Template copied and completed | Strategy Portion completed (teach-back occurred) | Study Plan updated | Fathom summary forwarded (mark Unable to Verify)
@@ -408,6 +409,7 @@ export default function CARSGrader() {
     studentName: "", tutorName: "", tutorEmail: "",
     sessionDate: new Date().toISOString().split("T")[0],
     sessionNumber: "1", transcript: "", studentDoc: "", studySchedule: "",
+    sopStudyScheduleUrl: "", sopStudySchedule: "no", sopQuestionPacks: "no", sopFullLengthExams: "no",
   });
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
 
@@ -532,8 +534,9 @@ export default function CARSGrader() {
     }
     setGradeError(null); setReport(null); setEmails(null); setScore(null); setRating(null); setLoading(true);
     try {
+      const sopVerification = `\n\nSOP VERIFICATION (manual input — third source of truth):\n- Study schedule provided in Google Sheet: ${form.sopStudySchedule.toUpperCase()}${form.sopStudyScheduleUrl ? ` (URL: ${form.sopStudyScheduleUrl})` : ""}\n- AAMC question packs assigned: ${form.sopQuestionPacks.toUpperCase()}\n- Ten full-length exams assigned: ${form.sopFullLengthExams.toUpperCase()}\n\nSOP VERIFICATION RULES:\n- YES = full credit for that SOP sub-item\n- PARTIAL = 50% credit for that SOP sub-item\n- NO = 0 points for that SOP sub-item UNLESS the transcript or student notes confirm otherwise (other sources can override a "No")\n- These manual inputs are a fail-safe — treat them as a third source of truth alongside transcript and student notes`;
       const gradeText = await callClaude(GRADING_PROMPT,
-        `STUDENT: ${form.studentName||"Not provided"}\nTUTOR: ${form.tutorName||"Not provided"}\nSESSION: ${form.sessionNumber}\nDATE: ${form.sessionDate}\n\nTRANSCRIPT:\n${form.transcript}\n\nSTUDENT NOTES:\n${form.studentDoc}\n\nSTUDY SCHEDULE (reference only):\n${form.studySchedule||"Not provided"}`
+        `STUDENT: ${form.studentName||"Not provided"}\nTUTOR: ${form.tutorName||"Not provided"}\nSESSION: ${form.sessionNumber}\nDATE: ${form.sessionDate}\n\nTRANSCRIPT:\n${form.transcript}\n\nSTUDENT NOTES:\n${form.studentDoc}\n\nSTUDY SCHEDULE (reference only):\n${form.studySchedule||"Not provided"}${sopVerification}`
       );
       setReport(gradeText);
 
@@ -616,11 +619,55 @@ export default function CARSGrader() {
         <textarea rows={3} placeholder="Optional…" value={form.studySchedule} onChange={set("studySchedule")} style={{ ...inputBase, resize: "vertical", lineHeight: 1.6 }} />
       </div>
 
+      {/* SOP Verification */}
+      <div style={{ height: 1, background: "#E5E7EB", margin: "4px 0 16px" }} />
+      <div style={{ marginBottom: 18 }}>
+        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#6c47ff", marginBottom: 14 }}>SOP Verification</p>
+        <p style={{ fontSize: 12, color: "#888", marginBottom: 16, lineHeight: 1.6 }}>Manual confirmation of key SOP items. These inputs act as a third source of truth alongside the transcript and student notes.</p>
+
+        {/* Study Schedule */}
+        <div style={{ marginBottom: 16, padding: "14px 16px", background: "#F9FAFB", borderRadius: 10, border: "1px solid #E5E7EB" }}>
+          <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#444", marginBottom: 8 }}>Study schedule provided in a Google Sheet</label>
+          <input type="url" placeholder="https://docs.google.com/spreadsheets/d/..." value={form.sopStudyScheduleUrl} onChange={set("sopStudyScheduleUrl")} style={{ ...inputBase, marginBottom: 10 }} />
+          <div style={{ display: "flex", gap: 8 }}>
+            {[["yes", "Yes"], ["partial", "Partial"], ["no", "No"]].map(([val, label]) => (
+              <label key={val} onClick={() => setForm(f => ({ ...f, sopStudySchedule: val }))} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "8px 12px", borderRadius: 8, border: `1.5px solid ${form.sopStudySchedule === val ? "#6c47ff" : "#E5E7EB"}`, background: form.sopStudySchedule === val ? "#ede9fe" : "#fff", color: form.sopStudySchedule === val ? "#6c47ff" : "#888", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.15s", userSelect: "none" }}>
+                {label}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* AAMC Question Packs */}
+        <div style={{ marginBottom: 16, padding: "14px 16px", background: "#F9FAFB", borderRadius: 10, border: "1px solid #E5E7EB" }}>
+          <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#444", marginBottom: 8 }}>Have the AAMC question packs been assigned?</label>
+          <div style={{ display: "flex", gap: 8 }}>
+            {[["yes", "Yes"], ["partial", "Partial"], ["no", "No"]].map(([val, label]) => (
+              <label key={val} onClick={() => setForm(f => ({ ...f, sopQuestionPacks: val }))} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "8px 12px", borderRadius: 8, border: `1.5px solid ${form.sopQuestionPacks === val ? "#6c47ff" : "#E5E7EB"}`, background: form.sopQuestionPacks === val ? "#ede9fe" : "#fff", color: form.sopQuestionPacks === val ? "#6c47ff" : "#888", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.15s", userSelect: "none" }}>
+                {label}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Full-Length Exams */}
+        <div style={{ marginBottom: 4, padding: "14px 16px", background: "#F9FAFB", borderRadius: 10, border: "1px solid #E5E7EB" }}>
+          <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#444", marginBottom: 8 }}>Have ten full-length exams been assigned?</label>
+          <div style={{ display: "flex", gap: 8 }}>
+            {[["yes", "Yes"], ["partial", "Partial"], ["no", "No"]].map(([val, label]) => (
+              <label key={val} onClick={() => setForm(f => ({ ...f, sopFullLengthExams: val }))} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "8px 12px", borderRadius: 8, border: `1.5px solid ${form.sopFullLengthExams === val ? "#6c47ff" : "#E5E7EB"}`, background: form.sopFullLengthExams === val ? "#ede9fe" : "#fff", color: form.sopFullLengthExams === val ? "#6c47ff" : "#888", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.15s", userSelect: "none" }}>
+                {label}
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {gradeError && <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "10px 14px", color: "#dc2626", fontSize: 13, marginBottom: 14 }}>{gradeError}</div>}
 
       <button onClick={handleGrade} disabled={loading} style={{ width: "100%", padding: "13px", background: loading ? "#a78bfa" : "#6c47ff", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, boxShadow: loading ? "none" : "0 4px 16px rgba(108,71,255,0.3)", transition: "all 0.15s" }}>
         {loading
-          ? <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2.5" style={{ animation: "spin 0.8s linear infinite", flexShrink: 0 }}><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" /></svg>Grading session + generating emails…</>
+          ? <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2.5" style={{ animation: "spin 0.8s linear infinite", flexShrink: 0 }}><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" /></svg>Grading session + generating email drafts…</>
           : "Grade this session →"}
       </button>
     </>

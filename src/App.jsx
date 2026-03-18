@@ -8,6 +8,7 @@ CORE GRADING RULES
 2. Evidence must be explicit. No credit for implied content. Partial credit when partial documentation exists.
 3. Score conservatively when uncertain.
 4. AAMC DUAL-SOURCE RULE: For AAMC scheduling/sequencing, check BOTH the transcript AND the student notes document. If EITHER source confirms AAMC materials were assigned/scheduled/completed, award full credit. Only deduct if BOTH sources fail to confirm. The student notes document saying "yes" to assigning all AAMC documents is sufficient on its own.
+5. SOP VERIFICATION INPUTS (THIRD SOURCE OF TRUTH): The grader may provide manual SOP verification inputs for: study schedule, AAMC question packs, and full-length exams. These are a fail-safe alongside transcript and student notes. Scoring: YES = full credit for that sub-item, PARTIAL = 50% credit, NO = 0 points UNLESS transcript or student notes confirm otherwise. Any source confirming the item can override a "No" from another source.
 
 SESSION 1 RUBRIC — Onboarding & Plan Build (90 pts documentation + 60 pts coaching = 150 total, scaled to 100)
 PASS/FAIL GATES: Session Notes Template copied and completed | Strategy Portion completed (teach-back occurred) | Study Plan updated | Fathom summary forwarded (mark Unable to Verify)
@@ -150,6 +151,7 @@ UNIVERSAL RULES (all sessions)
 - Strategy Portion receives 0 points if teach-back does not occur.
 - Missing any Pass/Fail Gate → Needs Remediation regardless of score.
 - AAMC DUAL-SOURCE RULE: For AAMC scheduling/deadlines, check BOTH the transcript AND the student notes document. If EITHER source confirms AAMC materials were assigned/scheduled/completed, award full credit. Only deduct if BOTH sources fail to confirm. The student notes document saying "yes" to assigning all AAMC documents is sufficient on its own.
+- SOP VERIFICATION INPUTS (THIRD SOURCE OF TRUTH): The grader may provide manual SOP verification inputs for: study schedule, AAMC question packs, and full-length exams. These are a fail-safe alongside transcript and student notes. Scoring: YES = full credit for that sub-item, PARTIAL = 50% credit, NO = 0 points UNLESS transcript or student notes confirm otherwise. Any source confirming the item can override a "No" from another source.
 
 PASS/FAIL GATES (missing any = Needs Remediation):
 Session Notes Template copied and completed | Strategy Portion completed (teach-back occurred) | Study Plan updated | Fathom summary forwarded to Molly Kielty and Anastasia (mark Unable to Verify if not evidenced)
@@ -442,6 +444,7 @@ export default function CARSGrader() {
     studentName: "", tutorName: "", tutorEmail: "",
     sessionDate: new Date().toISOString().split("T")[0],
     courseType: "515", sessionNumber: "1", transcript: "", studentDoc: "", studySchedule: "", fathomNotes: "",
+    sopStudyScheduleUrl: "", sopStudySchedule: "no", sopQuestionPacks: "no", sopFullLengthExams: "no",
   });
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
 
@@ -449,8 +452,7 @@ export default function CARSGrader() {
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState(null);
   const [emails, setEmails] = useState(null);
-  const [managementEmailSent, setManagementEmailSent] = useState(null);
-  const [managementEmailError, setManagementEmailError] = useState(null);
+  // Email sending disabled — drafts are still generated for review
   const [score, setScore] = useState(null);
   const [rating, setRating] = useState(null);
   const [gradeError, setGradeError] = useState(null);
@@ -702,11 +704,12 @@ ${tutorEmailBody ? `
     if (!form.transcript.trim() || !form.studentDoc.trim()) {
       setGradeError("Please provide both the session transcript and student notes document."); return;
     }
-    setGradeError(null); setReport(null); setEmails(null); setScore(null); setRating(null); setManagementEmailSent(null); setManagementEmailError(null); setLoading(true);
+    setGradeError(null); setReport(null); setEmails(null); setScore(null); setRating(null); setLoading(true);
     try {
       const gradingPrompt = (form.courseType === "cars") ? GRADING_PROMPT : ORIGINAL_GRADING_PROMPT;
+      const sopVerification = `\n\nSOP VERIFICATION (manual input — third source of truth):\n- Study schedule provided in Google Sheet: ${form.sopStudySchedule.toUpperCase()}${form.sopStudyScheduleUrl ? ` (URL: ${form.sopStudyScheduleUrl})` : ""}\n- AAMC question packs assigned: ${form.sopQuestionPacks.toUpperCase()}\n- Ten full-length exams assigned: ${form.sopFullLengthExams.toUpperCase()}\n\nSOP VERIFICATION RULES:\n- YES = full credit for that SOP sub-item\n- PARTIAL = 50% credit for that SOP sub-item\n- NO = 0 points for that SOP sub-item UNLESS the transcript or student notes confirm otherwise (other sources can override a "No")\n- These manual inputs are a fail-safe — treat them as a third source of truth alongside transcript and student notes`;
       const gradeText = await callClaude(gradingPrompt,
-        `COURSE TYPE: ${form.courseType === "515" ? "515+ Course" : form.courseType === "intensive" ? "Intensive" : "CARS Strategy"}\nSTUDENT: ${form.studentName||"Not provided"}\nTUTOR: ${form.tutorName||"Not provided"}\nSESSION: ${form.sessionNumber}\nDATE: ${form.sessionDate}\n\nTRANSCRIPT:\n${form.transcript}\n\nSTUDENT NOTES:\n${form.studentDoc}\n\nSTUDY SCHEDULE (reference only):\n${form.studySchedule||"Not provided"}\n\nFATHOM NOTES / SUMMARY (if provided):\n${form.fathomNotes||"Not provided"}`
+        `COURSE TYPE: ${form.courseType === "515" ? "515+ Course" : form.courseType === "intensive" ? "Intensive" : "CARS Strategy"}\nSTUDENT: ${form.studentName||"Not provided"}\nTUTOR: ${form.tutorName||"Not provided"}\nSESSION: ${form.sessionNumber}\nDATE: ${form.sessionDate}\n\nTRANSCRIPT:\n${form.transcript}\n\nSTUDENT NOTES:\n${form.studentDoc}\n\nSTUDY SCHEDULE (reference only):\n${form.studySchedule||"Not provided"}\n\nFATHOM NOTES / SUMMARY (if provided):\n${form.fathomNotes||"Not provided"}${sopVerification}`
       );
       setReport(gradeText);
 
@@ -747,43 +750,7 @@ ${tutorEmailBody ? `
         parsed = { tutorEmail: { subject: `Session ${form.sessionNumber} Grading Report`, body: emailText }, managementEmail: { subject: `Session ${form.sessionNumber} QA Report`, body: emailText } };
         setEmails(parsed);
       }
-      if (parsed?.managementEmail?.subject && parsed?.managementEmail?.body) {
-        const fullBody = parsed.managementEmail.body
-          + "\n\n────────────────────────────────────────\nFULL GRADING REPORT\n────────────────────────────────────────\n\n"
-          + gradeText;
-        const htmlEmail = buildHtmlEmail(parsed.managementEmail.body, gradeText, {
-          tutorName: form.tutorName || "—",
-          tutorEmail: form.tutorEmail || "",
-          studentName: form.studentName || "—",
-          sessionNumber: form.sessionNumber || "—",
-          sessionDate: form.sessionDate || "—",
-          courseType: form.courseType === "515" ? "515+ Course" : form.courseType === "intensive" ? "Intensive" : "CARS Strategy",
-          score: ps,
-          rating: pr,
-        }, parsed.tutorEmail?.body);
-        try {
-          const sendRes = await fetch("/api/send-email", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ subject: parsed.managementEmail.subject, body: fullBody, html: htmlEmail }),
-          });
-          let sendData;
-          try {
-            sendData = await sendRes.json();
-          } catch {
-            setManagementEmailSent(false);
-            setManagementEmailError(sendRes.status ? `${sendRes.status} ${sendRes.statusText} — invalid response` : "Invalid response from server");
-            sendData = null;
-          }
-          if (sendData) {
-            setManagementEmailSent(sendData.success === true);
-            setManagementEmailError(sendData.success ? null : (sendData.error || "Send failed"));
-          }
-        } catch (e) {
-          setManagementEmailSent(false);
-          setManagementEmailError(e.message || "Network error — check Vercel logs for /api/send-email");
-        }
-      }
+      // Email sending disabled — drafts are generated for review but not sent automatically
       // Store transcript + grading outcome for 3-day director digest
       try {
         await fetch("/api/record-session", {
@@ -801,6 +768,10 @@ ${tutorEmailBody ? `
             report_text: gradeText || null,
             transcript_text: form.transcript || null,
             fathom_notes: form.fathomNotes || null,
+            sop_study_schedule: form.sopStudySchedule || null,
+            sop_study_schedule_url: form.sopStudyScheduleUrl || null,
+            sop_question_packs: form.sopQuestionPacks || null,
+            sop_full_length_exams: form.sopFullLengthExams || null,
             host_data: null,
           }),
         });
@@ -873,11 +844,55 @@ ${tutorEmailBody ? `
         <textarea rows={4} placeholder="Paste Fathom summary or meeting notes here (e.g. AI summary, action items)…" value={form.fathomNotes} onChange={set("fathomNotes")} style={{ ...inputBase, resize: "vertical", lineHeight: 1.6 }} />
       </div>
 
+      {/* SOP Verification */}
+      <div style={{ height: 1, background: "#E5E7EB", margin: "4px 0 16px" }} />
+      <div style={{ marginBottom: 18 }}>
+        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#8A5CF6", marginBottom: 14 }}>SOP Verification</p>
+        <p style={{ fontSize: 12, color: "#5E6573", marginBottom: 16, lineHeight: 1.6 }}>Manual confirmation of key SOP items. These inputs act as a third source of truth alongside the transcript and student notes.</p>
+
+        {/* Study Schedule */}
+        <div style={{ marginBottom: 16, padding: "14px 16px", background: "#F9FAFB", borderRadius: 10, border: "1px solid #E5E7EB" }}>
+          <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#2B2F40", marginBottom: 8 }}>Study schedule provided in a Google Sheet</label>
+          <input type="url" placeholder="https://docs.google.com/spreadsheets/d/..." value={form.sopStudyScheduleUrl} onChange={set("sopStudyScheduleUrl")} style={{ ...inputBase, marginBottom: 10 }} />
+          <div style={{ display: "flex", gap: 8 }}>
+            {[["yes", "Yes"], ["partial", "Partial"], ["no", "No"]].map(([val, label]) => (
+              <label key={val} onClick={() => setForm(f => ({ ...f, sopStudySchedule: val }))} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "8px 12px", borderRadius: 8, border: `1.5px solid ${form.sopStudySchedule === val ? "#8A5CF6" : "#E5E7EB"}`, background: form.sopStudySchedule === val ? "#EDE9FE" : "#fff", color: form.sopStudySchedule === val ? "#8A5CF6" : "#5E6573", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.15s", userSelect: "none" }}>
+                {label}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* AAMC Question Packs */}
+        <div style={{ marginBottom: 16, padding: "14px 16px", background: "#F9FAFB", borderRadius: 10, border: "1px solid #E5E7EB" }}>
+          <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#2B2F40", marginBottom: 8 }}>Have the AAMC question packs been assigned?</label>
+          <div style={{ display: "flex", gap: 8 }}>
+            {[["yes", "Yes"], ["partial", "Partial"], ["no", "No"]].map(([val, label]) => (
+              <label key={val} onClick={() => setForm(f => ({ ...f, sopQuestionPacks: val }))} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "8px 12px", borderRadius: 8, border: `1.5px solid ${form.sopQuestionPacks === val ? "#8A5CF6" : "#E5E7EB"}`, background: form.sopQuestionPacks === val ? "#EDE9FE" : "#fff", color: form.sopQuestionPacks === val ? "#8A5CF6" : "#5E6573", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.15s", userSelect: "none" }}>
+                {label}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Full-Length Exams */}
+        <div style={{ marginBottom: 4, padding: "14px 16px", background: "#F9FAFB", borderRadius: 10, border: "1px solid #E5E7EB" }}>
+          <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#2B2F40", marginBottom: 8 }}>Have ten full-length exams been assigned?</label>
+          <div style={{ display: "flex", gap: 8 }}>
+            {[["yes", "Yes"], ["partial", "Partial"], ["no", "No"]].map(([val, label]) => (
+              <label key={val} onClick={() => setForm(f => ({ ...f, sopFullLengthExams: val }))} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "8px 12px", borderRadius: 8, border: `1.5px solid ${form.sopFullLengthExams === val ? "#8A5CF6" : "#E5E7EB"}`, background: form.sopFullLengthExams === val ? "#EDE9FE" : "#fff", color: form.sopFullLengthExams === val ? "#8A5CF6" : "#5E6573", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.15s", userSelect: "none" }}>
+                {label}
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {gradeError && <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "10px 14px", color: "#dc2626", fontSize: 13, marginBottom: 14 }}>{gradeError}</div>}
 
       <button onClick={handleGrade} disabled={loading} style={{ width: "100%", padding: "14px 24px", background: loading ? "#B88AFF" : "linear-gradient(135deg, #8A5CF6 0%, #B88AFF 100%)", color: "#fff", border: "none", borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, boxShadow: loading ? "none" : "0 4px 16px rgba(138,92,246,0.35)", transition: "all 0.15s" }}>
         {loading
-          ? <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2.5" style={{ animation: "spin 0.8s linear infinite", flexShrink: 0 }}><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" /></svg>Grading session + generating emails…</>
+          ? <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2.5" style={{ animation: "spin 0.8s linear infinite", flexShrink: 0 }}><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" /></svg>Grading session + generating email drafts…</>
           : <>Grade this session <span style={{ marginLeft: 4 }}>→</span></>}
       </button>
     </>
@@ -916,7 +931,7 @@ ${tutorEmailBody ? `
             <p style={{ fontSize: 12, fontWeight: 600, letterSpacing: "0.08em", color: "#5E6573", textTransform: "uppercase", marginBottom: 12 }}>515+ · Intensive · CARS</p>
             <h1 style={{ fontSize: "clamp(26px, 4vw, 38px)", fontWeight: 700, color: "#2B2F40", lineHeight: 1.2, letterSpacing: "-0.02em", marginBottom: 12 }}>Session grading, powered by AI.</h1>
             <p style={{ fontSize: 15, color: "#5E6573", lineHeight: 1.7, maxWidth: 560 }}>
-              Grade 515+, Intensive, or CARS sessions. Paste transcript and student notes to grade and send the management email to directors.
+              Grade 515+, Intensive, or CARS sessions. Paste transcript and student notes to generate grading reports and email drafts.
             </p>
           </div>
 
@@ -958,19 +973,7 @@ ${tutorEmailBody ? `
                 <div style={{ marginBottom: 10 }}>
                   <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#5E6573", marginBottom: 8 }}>Email drafts</p>
                   <EmailPanel title="Draft Tutor Email" subtitle={`To: ${form.tutorEmail || form.tutorName || "tutor"} · Detailed grading report`} tagColor="#8A5CF6" subject={emails.tutorEmail?.subject} body={emails.tutorEmail?.body} formatBody />
-                  <div>
-                    <EmailPanel title="Management Summary" subtitle="To: Anastasia, Molly, Carl, Adam · Triage + full tutor draft" tagColor="#f59e0b" subject={emails.managementEmail?.subject} body={emails.managementEmail?.body} />
-                    {managementEmailSent === true && (
-                      <p style={{ fontSize: 12, color: "#16a34a", fontWeight: 600, marginTop: 6 }}>✓ Management email sent to directors</p>
-                    )}
-                    {managementEmailSent === false && (
-                      <div style={{ marginTop: 8, padding: "12px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8 }}>
-                        <p style={{ fontSize: 13, color: "#dc2626", fontWeight: 600, marginBottom: 4 }}>Email not sent</p>
-                        <p style={{ fontSize: 12, color: "#b91c1c", marginBottom: 6 }}>{managementEmailError || "Unknown error"}</p>
-                        <p style={{ fontSize: 11, color: "#7f1d1d" }}>Check Vercel → Project → Logs (filter by /api/send-email) for details. Confirm SMTP_SERVER (hostname), FROM_EMAIL, SMTP_PASSWORD, and DIRECTOR_EMAIL or DIRECTOR_EMAILS are set in Vercel Environment Variables, then redeploy.</p>
-                      </div>
-                    )}
-                  </div>
+                  <EmailPanel title="Management Summary" subtitle="To: Anastasia, Molly, Carl, Adam · Triage + full tutor draft (draft only — not sent)" tagColor="#f59e0b" subject={emails.managementEmail?.subject} body={emails.managementEmail?.body} />
                 </div>
               )}
             </div>

@@ -211,12 +211,16 @@ class FathomClient:
 class SessionGrader:
     """Comprehensive grading engine for Session 1 tutoring transcripts."""
 
-    def __init__(self, transcript, student_name, tutor_name, session_date, student_notes=''):
+    def __init__(self, transcript, student_name, tutor_name, session_date, student_notes='',
+                 sop_study_schedule='no', sop_question_packs='no', sop_full_length_exams='no'):
         self.transcript = transcript
         self.student_name = student_name
         self.tutor_name = tutor_name
         self.session_date = session_date
         self.student_notes = student_notes or ''
+        self.sop_study_schedule = (sop_study_schedule or 'no').lower()
+        self.sop_question_packs = (sop_question_packs or 'no').lower()
+        self.sop_full_length_exams = (sop_full_length_exams or 'no').lower()
         self.scores = {}
         self.justifications = {}
         self.missing_items = {}
@@ -513,15 +517,18 @@ class SessionGrader:
         self.missing_items = {}
 
         # --- Section 2: SOP Compliance (60 pts) ---
+        # SOP verification inputs act as third source of truth (YES=full, PARTIAL=50%, NO=0 unless overridden)
         # 1. Full-Length Exam schedule: 12 full, 6 partial, 0 missing
-        if notes_check['fl_exam_schedule']['status'] == 'Yes':
+        fl_status = notes_check['fl_exam_schedule']['status']
+        if fl_status == 'Yes' or self.sop_full_length_exams == 'yes':
             self.scores['sop_fl_exam_schedule'] = 12
-        elif notes_check['fl_exam_schedule']['status'] == 'Partial':
+        elif fl_status == 'Partial' or self.sop_full_length_exams == 'partial':
             self.scores['sop_fl_exam_schedule'] = 6
         # 2. AAMC Question Packs/Resources: 8 full, 4 partial, 0 missing (conditional)
-        if notes_check['aamc_question_packs']['status'] == 'Yes':
+        aamc_status = notes_check['aamc_question_packs']['status']
+        if aamc_status == 'Yes' or self.sop_question_packs == 'yes':
             self.scores['sop_aamc_question_packs'] = 8
-        elif notes_check['aamc_question_packs']['status'] == 'Partial':
+        elif aamc_status == 'Partial' or self.sop_question_packs == 'partial':
             self.scores['sop_aamc_question_packs'] = 4
         # 3. Below-average topics: 10 full, 5 partial, 0
         if notes_check['below_avg_topics']['status'] == 'Yes':
@@ -560,21 +567,23 @@ class SessionGrader:
         self.justifications['notes_preparation'] = "Preparation evidence: test date, baseline, AAMC materials ref, weak areas."
         self.missing_items['notes_preparation'] = [x for x in ["Test date", "Baseline score", "Below-average topics"] if (x == "Test date" and info['test_date'] == 'Not found') or (x == "Baseline score" and info['baseline_score'] == 'Not found') or (x == "Below-average topics" and not (info['weak_chem'] or info['weak_bio']))]
 
-        # B. Study Plan Construction 0-13
+        # B. Study Plan Construction 0-13 — incorporates SOP verification as third source
         plan_pts = 0
-        if notes_check['fl_exam_schedule']['status'] != 'No':
+        fl_plan_ok = notes_check['fl_exam_schedule']['status'] != 'No' or self.sop_full_length_exams in ('yes', 'partial')
+        aamc_plan_ok = notes_check['aamc_question_packs']['status'] != 'No' or self.sop_question_packs in ('yes', 'partial')
+        if fl_plan_ok:
             plan_pts += 5
-        if notes_check['aamc_question_packs']['status'] != 'No':
+        if aamc_plan_ok:
             plan_pts += 5
-        if notes_check['weekly_checklist']['status'] != 'No':
+        if notes_check['weekly_checklist']['status'] != 'No' or self.sop_study_schedule in ('yes', 'partial'):
             plan_pts += 4
         if notes_check['daily_tasks']['status'] == 'Yes':
             plan_pts += 6
         elif notes_check['daily_tasks']['status'] == 'Partial':
             plan_pts += 3
         self.scores['notes_study_plan'] = min(plan_pts, 20)
-        self.justifications['notes_study_plan'] = "Study plan structure: FL exam schedule, AAMC question packs, weekly/daily tasks."
-        self.missing_items['notes_study_plan'] = [k for k, v in [('FL exam schedule', notes_check['fl_exam_schedule']), ('AAMC question packs', notes_check['aamc_question_packs']), ('Weekly checklist', notes_check['weekly_checklist']), ('Daily tasks Week 1', notes_check['daily_tasks'])] if v['status'] == 'No']
+        self.justifications['notes_study_plan'] = "Study plan structure: FL exam schedule, AAMC question packs, weekly/daily tasks (includes SOP verification inputs)."
+        self.missing_items['notes_study_plan'] = [k for k, v in [('FL exam schedule', {'status': 'No' if not fl_plan_ok else 'Yes'}), ('AAMC question packs', {'status': 'No' if not aamc_plan_ok else 'Yes'}), ('Weekly checklist', notes_check['weekly_checklist']), ('Daily tasks Week 1', notes_check['daily_tasks'])] if v['status'] == 'No']
 
         # C. Personalization & Load 0-7
         personal_pts = 0
@@ -1951,16 +1960,17 @@ def grade_session():
             student_name=data['student_name'],
             tutor_name=data['tutor_name'],
             session_date=data['session_date'],
-            student_notes=data.get('student_notes', '')
+            student_notes=data.get('student_notes', ''),
+            sop_study_schedule=data.get('sop_study_schedule', 'no'),
+            sop_question_packs=data.get('sop_question_packs', 'no'),
+            sop_full_length_exams=data.get('sop_full_length_exams', 'no'),
         )
-        
+
         findings = grader.grade()
         report = grader.generate_report()
-        
-        recipients = [data['tutor_email'], DIRECTOR_EMAIL]
-        subject = "Session 1 Grading: {} - {}".format(data['student_name'], findings['rating'])
-        email_sent = send_email(recipients, subject, report)
-        
+
+        # Email sending disabled — drafts are generated but not sent
+
         return jsonify({
             'success': True,
             'scores': findings['scores'],
@@ -1971,7 +1981,7 @@ def grade_session():
             'scaled_score': findings['scaled_score'],
             'overall_rating': findings['rating'],
             'director_email': DIRECTOR_EMAIL,
-            'email_sent': email_sent,
+            'email_sent': False,
             'report': report,
             'transcript_source': 'fathom' if recording_id else 'manual'
         })
