@@ -129,6 +129,27 @@ Tutor must:
 - Tutor checks student understanding mid-session
 - **Dual-source rule:** If the student notes document confirms AAMC materials were assigned/scheduled (e.g., "yes" to all AAMC documents), credit the tutor even if the transcript does not mention every AAMC assignment explicitly
 
+### 3b. AAMC Question Packs/Resources Scheduling (Conditional)
+
+If the student has AAMC question packs/resources (noted on student notes sheet), the tutor must schedule them. The specific AAMC resources:
+1. MCAT Biology Question Pack, Volume 1
+2. MCAT Biology Question Pack, Volume 2
+3. MCAT Chemistry Question Pack
+4. MCAT Physics Question Pack
+5. MCAT Critical Analysis and Reasoning Skills Question Pack, Volume 1
+6. MCAT Critical Analysis and Reasoning Skills Question Pack, Volume 2
+7. MCAT Section Bank (Biology, Chemistry, Psychology/Sociology sections)
+8. MCAT Official Prep Hub Independent Question Bank (formerly "Official Guide" questions)
+9. MCAT Official Prep Critical Analysis and Reasoning Skills Diagnostic Tool
+10. MCAT Official Prep Flashcards
+
+**Note:** These are SEPARATE from full-length exams. "AAMC exams" are full-length exams (see Section 6). "AAMC question packs/resources" are the items listed above.
+
+**Agent Check**
+- If student has AAMC resources: Tutor schedules them with deadlines
+- If student does NOT have AAMC resources: No penalty — full credit given automatically
+- Evidence can come from either transcript or student notes
+
 ---
 
 ### 4. Review Methodology (Required)
@@ -161,10 +182,14 @@ Tutor must focus on:
 
 ---
 
-### 6. Practice Exam Scheduling (Required)
+### 6. Full-Length Practice Exam Scheduling (Required — Mandatory for All Students)
 
 - Total exams required: **11 (including baseline)**
-- Tutor must schedule **10 future practice exams**
+- Tutor must schedule **10 future full-length practice exams** on the student notes sheet
+- Sources: **Jack Westin Full Length 1–6** and **AAMC exams** (remaining to total 10)
+- Each exam should have: Exam #, Source (JW FL or AAMC), Planned Date
+
+**Note:** These full-length exams are SEPARATE from AAMC question packs/resources. "AAMC exam" = full-length exam. "AAMC question pack" = separate resource (see Section 3b).
 
 **Exceptions**
 - June Intensive / May 515 → Minimum 8 exams
@@ -173,6 +198,7 @@ Tutor must focus on:
 **Agent Check**
 - Tutor references total exam count
 - Tutor acknowledges exception if applicable
+- Evidence can come from either transcript or student notes
 
 ---
 
@@ -196,8 +222,9 @@ Tutor must focus on:
 - Missing baseline discussion
 - No documentation mentioned
 - No schedule created
-- No AAMC passage work (flag only if BOTH transcript and student notes document lack evidence)
-- No exam planning
+- No AAMC passage work
+- No full-length exam planning
+- Student has AAMC question packs but no scheduling evidence
 
 ---
 

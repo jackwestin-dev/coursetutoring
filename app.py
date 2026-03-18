@@ -253,7 +253,8 @@ class SessionGrader:
         
         # Session elements
         has_fl_discussion = bool(re.search(r'(?:full.?length|FL|practice\s*(?:exam|test))', self.transcript, re.I))
-        has_aamc = bool(re.search(r'AAMC', self.transcript, re.I)) or bool(re.search(r'AAMC', self.student_notes, re.I))
+        has_aamc = bool(re.search(r'AAMC', self.transcript, re.I))
+        has_aamc_qpacks = bool(re.search(r'(?:question\s*pack|q[\-\s]*pack|section\s*bank|flashcard|official\s*prep|diagnostic\s*tool)', self.transcript, re.I))
         has_strategy = bool(re.search(r'(?:strategy|approach|technique|method|how to)', self.transcript, re.I))
         has_next_session = bool(re.search(r'(?:next\s+session|see\s+you|follow.?up|two\s+or\s+three\s+weeks)', self.transcript, re.I))
         
@@ -290,6 +291,7 @@ class SessionGrader:
             'strong_psych': strong_psych,
             'has_fl_discussion': has_fl_discussion,
             'has_aamc': has_aamc,
+            'has_aamc_qpacks': has_aamc_qpacks,
             'has_strategy': has_strategy,
             'has_next_session': has_next_session,
             'action_items': action_items,
@@ -325,26 +327,22 @@ class SessionGrader:
         """Check which SOP items are present in documented notes/action items."""
         action_text = '\n'.join(re.findall(r'ACTION\s*ITEM[:\s]+([^\n]+)', self.transcript, re.I))
 
-        # AAMC dual-source rule: check both action items AND student notes document
-        student_doc_confirms_aamc = self._check_student_notes_aamc()
-        if student_doc_confirms_aamc:
-            aamc_status = 'Yes'
-            aamc_evidence = 'Student notes document confirms AAMC materials assigned/scheduled'
-        elif re.search(r'AAMC', action_text, re.I):
-            aamc_status = 'Partial'
-            aamc_evidence = self._get_evidence(action_text, r'AAMC[^.]*') or 'AAMC referenced in notes'
-        else:
-            aamc_status = 'No'
-            aamc_evidence = '(Not documented)'
+        # Detect if student has no AAMC question packs
+        combined_text = (action_text + ' ' + self.transcript).lower()
+        has_no_aamc_qp = bool(re.search(r'(?:no\s+aamc|doesn.t\s+have\s+aamc|does\s+not\s+have\s+aamc|don.t\s+have\s+aamc)', combined_text))
+
+        # AAMC question pack keywords (separate from exams)
+        qpack_pattern = r'(?:question\s*pack|q[\-\s]*pack|section\s*bank|flashcard|official\s*prep|diagnostic\s*tool)'
+        has_qpack_ref = bool(re.search(qpack_pattern, combined_text))
 
         checks = {
-            'exam_schedule': {
-                'status': 'Partial' if re.search(r'FL|full.?length|Feb\s*\d', action_text, re.I) else 'No',
-                'evidence': self._get_evidence(action_text, r'(?:FL|full.?length|practice)[^.]*') or '(Not documented)'
+            'fl_exam_schedule': {
+                'status': 'Partial' if re.search(r'FL|full.?length|Feb\s*\d|JW\s*FL|Jack\s*Westin\s*FL|practice\s*exam', action_text, re.I) else 'No',
+                'evidence': self._get_evidence(action_text, r'(?:FL|full.?length|practice\s*exam|JW\s*FL)[^.]*') or '(Not documented)'
             },
-            'aamc_sequencing': {
-                'status': aamc_status,
-                'evidence': aamc_evidence,
+            'aamc_question_packs': {
+                'status': 'Yes' if has_no_aamc_qp else ('Partial' if has_qpack_ref or re.search(r'AAMC', action_text, re.I) else 'No'),
+                'evidence': 'Student has no AAMC question packs — full credit' if has_no_aamc_qp else (self._get_evidence(action_text, r'(?:question\s*pack|q[\-\s]*pack|section\s*bank|AAMC)[^.]*') or '(Not documented)')
             },
             'below_avg_topics': {
                 'status': 'Partial' if re.search(r'(?:review|study|practice|action\s*potential|acid)', action_text, re.I) else 'No',
@@ -442,7 +440,7 @@ class SessionGrader:
 
         # Initialize new score dict (Section 2: SOP 60, Section 3: Notes 30, Section 4: Coaching 60)
         self.scores = {
-            'sop_exam_schedule': 0, 'sop_aamc_deadlines': 0, 'sop_below_avg_topics': 0,
+            'sop_fl_exam_schedule': 0, 'sop_aamc_question_packs': 0, 'sop_below_avg_topics': 0,
             'sop_weekly_checklist': 0, 'sop_daily_tasks': 0, 'sop_strategy_notes': 0,
             'sop_next_session': 0, 'sop_major_takeaways': 0,
             'notes_preparation': 0, 'notes_study_plan': 0, 'notes_personalization': 0,
@@ -452,16 +450,16 @@ class SessionGrader:
         self.missing_items = {}
 
         # --- Section 2: SOP Compliance (60 pts) ---
-        # 1. Exam schedule: 10 full, 5 partial, 0 missing
-        if notes_check['exam_schedule']['status'] == 'Yes':
-            self.scores['sop_exam_schedule'] = 10
-        elif notes_check['exam_schedule']['status'] == 'Partial':
-            self.scores['sop_exam_schedule'] = 5
-        # 2. AAMC deadlines: 10 full, 5 if referenced but no deadlines, 0
-        if notes_check['aamc_sequencing']['status'] == 'Yes':
-            self.scores['sop_aamc_deadlines'] = 10
-        elif notes_check['aamc_sequencing']['status'] == 'Partial':
-            self.scores['sop_aamc_deadlines'] = 5
+        # 1. Full-Length Exam schedule: 12 full, 6 partial, 0 missing
+        if notes_check['fl_exam_schedule']['status'] == 'Yes':
+            self.scores['sop_fl_exam_schedule'] = 12
+        elif notes_check['fl_exam_schedule']['status'] == 'Partial':
+            self.scores['sop_fl_exam_schedule'] = 6
+        # 2. AAMC Question Packs/Resources: 8 full, 4 partial, 0 missing (conditional)
+        if notes_check['aamc_question_packs']['status'] == 'Yes':
+            self.scores['sop_aamc_question_packs'] = 8
+        elif notes_check['aamc_question_packs']['status'] == 'Partial':
+            self.scores['sop_aamc_question_packs'] = 4
         # 3. Below-average topics: 10 full, 5 partial, 0
         if notes_check['below_avg_topics']['status'] == 'Yes':
             self.scores['sop_below_avg_topics'] = 10
@@ -494,26 +492,26 @@ class SessionGrader:
         if info['has_aamc']:
             prep_pts += 2
         if info['weak_chem'] or info['weak_bio']:
-            prep_pts += 2
-        self.scores['notes_preparation'] = min(prep_pts, 10)
-        self.justifications['notes_preparation'] = "Preparation evidence: test date, baseline, AAMC ref, weak areas."
+            prep_pts += 3
+        self.scores['notes_preparation'] = min(prep_pts, 15)
+        self.justifications['notes_preparation'] = "Preparation evidence: test date, baseline, AAMC materials ref, weak areas."
         self.missing_items['notes_preparation'] = [x for x in ["Test date", "Baseline score", "Below-average topics"] if (x == "Test date" and info['test_date'] == 'Not found') or (x == "Baseline score" and info['baseline_score'] == 'Not found') or (x == "Below-average topics" and not (info['weak_chem'] or info['weak_bio']))]
 
         # B. Study Plan Construction 0-13
         plan_pts = 0
-        if notes_check['exam_schedule']['status'] != 'No':
-            plan_pts += 3
-        if notes_check['aamc_sequencing']['status'] != 'No':
-            plan_pts += 3
+        if notes_check['fl_exam_schedule']['status'] != 'No':
+            plan_pts += 5
+        if notes_check['aamc_question_packs']['status'] != 'No':
+            plan_pts += 5
         if notes_check['weekly_checklist']['status'] != 'No':
-            plan_pts += 3
-        if notes_check['daily_tasks']['status'] == 'Yes':
             plan_pts += 4
+        if notes_check['daily_tasks']['status'] == 'Yes':
+            plan_pts += 6
         elif notes_check['daily_tasks']['status'] == 'Partial':
-            plan_pts += 2
-        self.scores['notes_study_plan'] = min(plan_pts, 13)
-        self.justifications['notes_study_plan'] = "Study plan structure: exam schedule, AAMC, weekly/daily tasks."
-        self.missing_items['notes_study_plan'] = [k for k, v in [('Exam schedule', notes_check['exam_schedule']), ('AAMC sequencing', notes_check['aamc_sequencing']), ('Weekly checklist', notes_check['weekly_checklist']), ('Daily tasks Week 1', notes_check['daily_tasks'])] if v['status'] == 'No']
+            plan_pts += 3
+        self.scores['notes_study_plan'] = min(plan_pts, 20)
+        self.justifications['notes_study_plan'] = "Study plan structure: FL exam schedule, AAMC question packs, weekly/daily tasks."
+        self.missing_items['notes_study_plan'] = [k for k, v in [('FL exam schedule', notes_check['fl_exam_schedule']), ('AAMC question packs', notes_check['aamc_question_packs']), ('Weekly checklist', notes_check['weekly_checklist']), ('Daily tasks Week 1', notes_check['daily_tasks'])] if v['status'] == 'No']
 
         # C. Personalization & Load 0-7
         personal_pts = 0
@@ -594,7 +592,7 @@ class SessionGrader:
     def _get_biggest_risk(self):
         """Determine the biggest risk based on scores."""
         if self.findings.get('sop_total', 0) < 35:
-            return "SOP compliance is low — student has insufficient take-home documentation (exam schedule, AAMC plan, weekly/daily tasks, or major takeaways closing)."
+            return "SOP compliance is low — student has insufficient take-home documentation (FL exam schedule, AAMC question pack scheduling, weekly/daily tasks, or major takeaways closing)."
         if self.scores.get('sop_major_takeaways', 0) == 0:
             return "Required closing missing: tutor did not ask 'What were your major takeaways?' in the final portion of the session."
         if self.findings.get('notes_total', 0) < 25:
@@ -606,10 +604,10 @@ class SessionGrader:
     def _get_top_fixes(self):
         """Generate top 3 fixes based on lowest scores and missing items."""
         fixes = []
-        if self.scores.get('sop_exam_schedule', 0) < 10:
-            fixes.append("Document exam schedule with all FL dates explicitly in notes")
-        if self.scores.get('sop_aamc_deadlines', 0) < 10:
-            fixes.append("Document AAMC sequencing and deadlines in the study plan")
+        if self.scores.get('sop_fl_exam_schedule', 0) < 12:
+            fixes.append("Document FL exam schedule with all 10 dates (JW FL 1-6 + AAMC exams) in notes")
+        if self.scores.get('sop_aamc_question_packs', 0) < 8:
+            fixes.append("Schedule AAMC question packs/resources (if student has them) with deadlines in the study plan")
         if self.scores.get('sop_major_takeaways', 0) == 0:
             fixes.append("Required closing: Ask 'What were your major takeaways?' at session end (all 515+, Intensive, CARS sessions)")
         if self.scores.get('sop_next_session', 0) == 0:
@@ -632,8 +630,8 @@ class SessionGrader:
             ('Student constraints (classes, accommodations)', info['has_classes'] or info['has_adhd'], 'No'),
             ('Weak areas identified', info['weak_chem'] or info['weak_bio'], 'No'),
             ('Strong areas (CARS, Psych/Soc)', info['strong_cars'] or info['strong_psych'], 'No'),
-            ('FL schedule discussion', info['has_fl_discussion'], 'No'),
-            ('AAMC sequencing', info['has_aamc'], 'No'),
+            ('FL exam schedule (10 exams: JW FL + AAMC)', info['has_fl_discussion'], 'No'),
+            ('AAMC question packs/resources scheduling', info.get('has_aamc_qpacks', info['has_aamc']), 'No'),
         ]
         
         for topic in info['topics_discussed']:
@@ -671,14 +669,14 @@ class SessionGrader:
         if sop_total < 40:
             improvements.append({
                 'title': 'Critical: SOP Documentation Gaps',
-                'what': 'Multiple required SOP items are missing or partial (exam schedule, AAMC plan, weekly/daily tasks, or major takeaways closing).',
+                'what': 'Multiple required SOP items are missing or partial (FL exam schedule, AAMC question pack scheduling, weekly/daily tasks, or major takeaways closing).',
                 'why': 'Student needs a complete take-home document and a clear session close. Without it, they cannot follow the plan independently.',
-                'fix': 'Create a Google Doc with Student Snapshot, Exam Schedule, AAMC sequencing, Weekly Checklist, Week 1 Daily Tasks, Strategy Summary. End every session by asking: "What were your major takeaways?"'
+                'fix': 'Create a Google Doc with Student Snapshot, FL Exam Schedule (10 exams: JW FL 1-6 + AAMC exams), AAMC Question Pack scheduling (if student has them), Weekly Checklist, Week 1 Daily Tasks, Strategy Summary. End every session by asking: "What were your major takeaways?"'
             })
         
-        if notes_check['exam_schedule']['status'] == 'No':
+        if notes_check['fl_exam_schedule']['status'] == 'No':
             improvements.append({
-                'title': 'Missing: Structured Exam Schedule',
+                'title': 'Missing: Structured FL Exam Schedule',
                 'what': 'FL sequencing may have been discussed verbally but was not documented with specific dates.',
                 'why': 'Student needs clarity on which test to take each week. Without a documented schedule, they may sequence incorrectly.',
                 'fix': 'Create a table: Week | Date | Exam | Notes. Be explicit with dates. Include the test date as the anchor.'
@@ -762,8 +760,8 @@ SECTION 2: SOP COMPLIANCE CHECKLIST (60 pts)
 
 SOP Item                                          | Score | Max | Evidence
 --------------------------------------------------|-------|-----|---------
-Exam schedule (all FL dates documented)           | {sop_exam:2} | 10 | {exam_ev}
-AAMC deadlines/sequencing documented              | {sop_aamc:2} | 10 | {aamc_ev}
+Full-Length Exam schedule (10 FLs)                | {sop_exam:2} | 12 | {exam_ev}
+AAMC Question Packs/Resources scheduling          | {sop_aamc:2} |  8 | {aamc_ev}
 Below-average topic review                        | {sop_topics:2} | 10 | {topics_ev}
 Weekly checklist present                          | {sop_weekly:2} |  8 | {weekly_ev}
 Daily tasks for Week 1 documented                 | {sop_daily:2} |  8 | {daily_ev}
@@ -809,8 +807,8 @@ SECTION 5: SOP EVIDENCE (NOTES-BASED)
 
 SOP Item                                          | Present? | Evidence
 --------------------------------------------------|----------|--------------------------------------------------
-Exam schedule                                     | {exam_status:8} | {exam_ev}
-AAMC sequencing/deadlines                         | {aamc_status:8} | {aamc_ev}
+Full-Length Exam schedule (10 FLs)                | {exam_status:8} | {exam_ev}
+AAMC Question Packs/Resources                     | {aamc_status:8} | {aamc_ev}
 Below-average topics                              | {topics_status:8} | {topics_ev}
 Weekly checklist                                  | {weekly_status:8} | {weekly_ev}
 Daily tasks for Week 1                            | {daily_status:8} | {daily_ev}
@@ -829,8 +827,8 @@ What Was Discussed in Transcript (Should Have Been in Notes)
 Topic Discussed                                           | In Notes?
 ----------------------------------------------------------|----------
 """.format(
-            sop_exam=self.scores['sop_exam_schedule'],
-            sop_aamc=self.scores['sop_aamc_deadlines'],
+            sop_exam=self.scores['sop_fl_exam_schedule'],
+            sop_aamc=self.scores['sop_aamc_question_packs'],
             sop_topics=self.scores['sop_below_avg_topics'],
             sop_weekly=self.scores['sop_weekly_checklist'],
             sop_daily=self.scores['sop_daily_tasks'],
@@ -855,10 +853,10 @@ Topic Discussed                                           | In Notes?
             coach_probing_just=self.justifications.get('coaching_probing', ''),
             coach_probing_missing=', '.join(self.missing_items.get('coaching_probing', [])),
             coaching_total=f['coaching_total'],
-            exam_status=notes_check['exam_schedule']['status'],
-            exam_ev=(notes_check['exam_schedule']['evidence'] or '')[:50],
-            aamc_status=notes_check['aamc_sequencing']['status'],
-            aamc_ev=(notes_check['aamc_sequencing']['evidence'] or '')[:50],
+            exam_status=notes_check['fl_exam_schedule']['status'],
+            exam_ev=(notes_check['fl_exam_schedule']['evidence'] or '')[:50],
+            aamc_status=notes_check['aamc_question_packs']['status'],
+            aamc_ev=(notes_check['aamc_question_packs']['evidence'] or '')[:50],
             topics_status=notes_check['below_avg_topics']['status'],
             topics_ev=(notes_check['below_avg_topics']['evidence'] or '')[:50],
             weekly_status=notes_check['weekly_checklist']['status'],
@@ -944,8 +942,8 @@ FINAL SCORE SUMMARY
 Section                              | Score  | Max
 -------------------------------------|--------|-----
 SOP Compliance Checklist             | {sop_total:2}     | 60
-  — Exam schedule                    | {sop_exam:2}      | 10
-  — AAMC deadlines                   | {sop_aamc:2}      | 10
+  — Full-Length Exam schedule        | {sop_exam:2}      | 12
+  — AAMC Question Packs/Resources   | {sop_aamc:2}      |  8
   — Below-average topics             | {sop_topics:2}      | 10
   — Weekly checklist                | {sop_weekly:2}      |  8
   — Daily tasks (Week 1)             | {sop_daily:2}      |  8
@@ -981,8 +979,8 @@ Reference Documents: first_session_sop_agent.md, grading_first_session_agent.md,
 """.format(
             tutor=self.tutor_name.split()[0] if self.tutor_name else 'Tutor',
             sop_total=f['sop_total'],
-            sop_exam=self.scores['sop_exam_schedule'],
-            sop_aamc=self.scores['sop_aamc_deadlines'],
+            sop_exam=self.scores['sop_fl_exam_schedule'],
+            sop_aamc=self.scores['sop_aamc_question_packs'],
             sop_topics=self.scores['sop_below_avg_topics'],
             sop_weekly=self.scores['sop_weekly_checklist'],
             sop_daily=self.scores['sop_daily_tasks'],
@@ -1086,12 +1084,16 @@ Week | Date   | Exam              | Notes
         notes_v2 += """
 ________________________________________________________________________________
 
-AAMC Plan
+AAMC Question Packs/Resources Plan
 
-- AAMC FLs: Start 6 weeks before test date
+(Only applicable if student has these resources — check student notes sheet)
+Resources list: Bio QP Vol 1 & 2, Chem QP, Physics QP, CARS QP Vol 1 & 2,
+Section Bank, Official Prep Hub Question Bank, CARS Diagnostic Tool, Flashcards
+
 - Section Banks: Integrate during AAMC FL phase
 - Q-Packs: Use for supplemental topic review
-- Deadline: All AAMC material completed by test day minus 1
+- Flashcards: Ongoing throughout study period
+- Deadline: All AAMC materials completed by test day minus 1
 
 ________________________________________________________________________________
 
@@ -1154,7 +1156,7 @@ Document shared with: anastasia@jackwestin.com, michaelmel@jackwestin.com
         elif scaled >= 75:
             return "Good session with adequate documentation. Minor improvements recommended for completeness. Score bands: 90-100 Exceeds, 75-89 Meets, 60-74 Coach, below 60 Remediate."
         elif scaled >= 60:
-            return "The tutoring session content appears solid based on transcript analysis. However, documentation or coaching gaps exist. Address SOP items (exam schedule, AAMC plan, major takeaways closing) and notes quality to improve the scaled score."
+            return "The tutoring session content appears solid based on transcript analysis. However, documentation or coaching gaps exist. Address SOP items (FL exam schedule, AAMC question pack scheduling, major takeaways closing) and notes quality to improve the scaled score."
         else:
             return "Significant documentation or coaching gaps identified. The session requires immediate follow-up: create comprehensive session notes, confirm next session date, and close every session by asking 'What were your major takeaways?'"
 

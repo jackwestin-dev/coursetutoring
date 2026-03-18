@@ -130,8 +130,8 @@ class SessionGrader:
         student_doc_confirms_aamc = self._check_student_notes_aamc()
 
         checks = {
-            'exam_schedule': {'status': 'No', 'evidence': '(Not documented)'},
-            'aamc_sequencing': {'status': 'No', 'evidence': '(Not documented)'},
+            'fl_exam_schedule': {'status': 'No', 'evidence': '(Not documented)'},
+            'aamc_question_packs': {'status': 'No', 'evidence': '(Not documented)'},
             'below_avg_topics': {'status': 'No', 'evidence': '(Not documented)'},
             'weekly_checklist': {'status': 'No', 'evidence': '(Not documented)'},
             'daily_tasks': {'status': 'No', 'evidence': '(Not documented)'},
@@ -141,12 +141,23 @@ class SessionGrader:
             'baseline_documented': {'status': 'No', 'evidence': '(Not documented)'}
         }
 
-        if 'fl' in text and any(w in text for w in ['schedule', 'week', 'saturday']):
-            checks['exam_schedule'] = {'status': 'Partial', 'evidence': 'FL scheduling discussed verbally'}
-        if student_doc_confirms_aamc:
-            checks['aamc_sequencing'] = {'status': 'Yes', 'evidence': 'Student notes document confirms AAMC materials assigned/scheduled'}
-        elif 'aamc' in text:
-            checks['aamc_sequencing'] = {'status': 'Partial', 'evidence': 'AAMC mentioned in discussion'}
+        # Full-Length Exam schedule detection (JW FL, AAMC exams, full length, practice exam)
+        fl_keywords = ['full length', 'full-length', 'jw fl', 'jack westin fl', 'practice exam', 'aamc fl']
+        if ('fl' in text and any(w in text for w in ['schedule', 'week', 'saturday', 'date'])) or any(kw in text for kw in fl_keywords):
+            checks['fl_exam_schedule'] = {'status': 'Partial', 'evidence': 'FL exam scheduling discussed'}
+
+        # AAMC Question Packs/Resources detection (separate from exams)
+        # Dual-source rule: student notes document is equally valid evidence
+        qpack_keywords = ['question pack', 'q-pack', 'qpack', 'section bank', 'flashcard', 'official prep', 'diagnostic tool']
+        has_no_aamc = 'no aamc' in text or "doesn't have aamc" in text or 'does not have aamc' in text or "don't have aamc" in text
+        if has_no_aamc:
+            checks['aamc_question_packs'] = {'status': 'Yes', 'evidence': 'Student has no AAMC question packs — full credit'}
+        elif student_doc_confirms_aamc:
+            checks['aamc_question_packs'] = {'status': 'Yes', 'evidence': 'Student notes document confirms AAMC materials assigned/scheduled'}
+        elif any(kw in text for kw in qpack_keywords):
+            checks['aamc_question_packs'] = {'status': 'Partial', 'evidence': 'AAMC question packs/resources mentioned'}
+        elif 'aamc' in text and not any(kw in text for kw in ['exam', 'full length', 'full-length']):
+            checks['aamc_question_packs'] = {'status': 'Partial', 'evidence': 'AAMC materials referenced (likely question packs)'}
         if any(w in text for w in ['weak', 'below', 'struggle', 'hard']):
             checks['below_avg_topics'] = {'status': 'Partial', 'evidence': 'Weak areas discussed'}
         if 'daily' in text or 'week 1' in text:
@@ -191,16 +202,16 @@ class SessionGrader:
         plan_score = 3
         plan_just = []
         plan_missing = []
-        if notes_check['exam_schedule']['status'] != 'No':
+        if notes_check['fl_exam_schedule']['status'] != 'No':
             plan_score += 2
-            plan_just.append("Some exam scheduling discussed")
+            plan_just.append("Some FL exam scheduling discussed")
         else:
-            plan_missing.append("Practice exam schedule with dates")
-        if notes_check['aamc_sequencing']['status'] != 'No':
+            plan_missing.append("Full-length exam schedule with dates (10 exams: JW FL 1-6 + AAMC exams)")
+        if notes_check['aamc_question_packs']['status'] != 'No':
             plan_score += 1
-            plan_just.append("AAMC materials mentioned")
+            plan_just.append("AAMC question packs/resources referenced")
         else:
-            plan_missing.append("AAMC sequencing and deadlines")
+            plan_missing.append("AAMC question packs/resources scheduling (if student has them)")
         if notes_check['weekly_checklist']['status'] != 'No':
             plan_score += 2
         else:
@@ -211,7 +222,7 @@ class SessionGrader:
             plan_missing.append("Daily tasks for Week 1")
         
         self.scores['Study Plan'] = min(plan_score, 10)
-        self.justifications['Study Plan'] = ' '.join(plan_just) + " However, notes contain minimal structured study plan documentation." if plan_just else "The notes contain minimal to no structured study plan. No weekly checklist, no AAMC deadlines, and limited daily task assignments are documented."
+        self.justifications['Study Plan'] = ' '.join(plan_just) + " However, notes contain minimal structured study plan documentation." if plan_just else "The notes contain minimal to no structured study plan. No weekly checklist, no AAMC question pack scheduling, and limited daily task assignments are documented."
         self.missing_items['Study Plan'] = plan_missing if plan_missing else ["Structured exam schedule", "Weekly checklist", "Daily tasks"]
         
         # Personalization score
@@ -307,9 +318,9 @@ class SessionGrader:
         """Generate top 3 fixes based on lowest scores."""
         fixes = []
         if self.scores.get('Study Plan', 10) <= 5:
-            fixes.append("Create a proper Google Doc with student snapshot, study schedule, AAMC sequencing, and weekly/daily task breakdown")
+            fixes.append("Create a proper Google Doc with student snapshot, study schedule, FL exam dates, AAMC question pack scheduling, and weekly/daily task breakdown")
         if self.scores.get('Study Plan', 10) <= 6:
-            fixes.append("Document the exam schedule explicitly (11 total FLs with dates and which tests to take when)")
+            fixes.append("Document the FL exam schedule explicitly (10 FLs: JW FL 1-6 + AAMC exams, with dates for each)")
         if self.missing_items.get('Preparation'):
             fixes.append("Add below-average topic list with specific daily/weekly assignments for weak areas")
         if self.scores.get('Clarity', 10) <= 5:
@@ -383,8 +394,8 @@ class SessionGrader:
             ('Student constraints (classes, accommodations)', info['has_classes'] or info['has_adhd'], 'No'),
             ('Weak areas identified', info['weak_chem'] or info['weak_bio'], 'No'),
             ('Strong areas identified', info['strong_cars'] or info['strong_psych'], 'No'),
-            ('FL schedule discussed', True, 'No'),
-            ('AAMC sequencing mentioned', True, 'No'),
+            ('FL exam schedule (10 exams: JW FL + AAMC)', True, 'No'),
+            ('AAMC question packs/resources scheduling', True, 'No'),
         ]
         
         for topic in info['topics_discussed']:
@@ -475,12 +486,16 @@ Week | Date   | Exam              | Notes
         notes_v2 += """
 ________________________________________________________________________________
 
-AAMC Plan
+AAMC Question Packs/Resources Plan
 
-- AAMC FLs: Start 6 weeks before test date
+(Only applicable if student has these resources — check student notes sheet)
+Resources list: Bio QP Vol 1 & 2, Chem QP, Physics QP, CARS QP Vol 1 & 2,
+Section Bank, Official Prep Hub Question Bank, CARS Diagnostic Tool, Flashcards
+
 - Section Banks: Integrate during AAMC FL phase
 - Q-Packs: Use for supplemental topic review
-- Deadline: All AAMC material completed by test day minus 1
+- Flashcards: Ongoing throughout study period
+- Deadline: All AAMC materials completed by test day minus 1
 
 ________________________________________________________________________________
 
@@ -685,8 +700,8 @@ SECTION 3: SOP COMPLIANCE CHECKLIST (NOTES-BASED)
 
 SOP Item                                          | Present? | Evidence
 --------------------------------------------------|----------|--------------------------------------------------
-Exam schedule                                     | {exam_status:8} | {exam_ev}
-AAMC sequencing/deadlines                         | {aamc_status:8} | {aamc_ev}
+Full-Length Exam schedule (10 FLs)                | {fl_status:8} | {fl_ev}
+AAMC Question Packs/Resources                     | {qp_status:8} | {qp_ev}
 Below-average topics (excluding course-covered)   | {topics_status:8} | {topics_ev}
 Weekly checklist                                  | {weekly_status:8} | {weekly_ev}
 Daily tasks for Week 1                            | {daily_status:8} | {daily_ev}
@@ -706,10 +721,10 @@ What Was Discussed in Transcript (Should Have Been in Notes)
 Topic Discussed                                           | In Notes?
 ----------------------------------------------------------|----------
 """.format(
-            exam_status=notes_check['exam_schedule']['status'],
-            exam_ev=notes_check['exam_schedule']['evidence'][:50],
-            aamc_status=notes_check['aamc_sequencing']['status'],
-            aamc_ev=notes_check['aamc_sequencing']['evidence'][:50],
+            fl_status=notes_check['fl_exam_schedule']['status'],
+            fl_ev=notes_check['fl_exam_schedule']['evidence'][:50],
+            qp_status=notes_check['aamc_question_packs']['status'],
+            qp_ev=notes_check['aamc_question_packs']['evidence'][:50],
             topics_status=notes_check['below_avg_topics']['status'],
             topics_ev=notes_check['below_avg_topics']['evidence'][:50],
             weekly_status=notes_check['weekly_checklist']['status'],
