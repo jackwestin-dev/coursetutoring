@@ -133,6 +133,7 @@ Agent should return:
 - **Full-Length Exams vs. AAMC Question Packs:** These are scored SEPARATELY. "AAMC exam" = full-length exam (item 1). "AAMC question pack/section bank/flashcards" = AAMC resources (item 2). The agent must distinguish between these based on context.
 - **AAMC Question Packs conditional rule:** If the student notes indicate the student does NOT have AAMC question packs/resources, award full credit (8/8) for that SOP item automatically.
 - **Dual-source rule:** Evidence for any SOP item can come from EITHER the transcript OR the student notes document. If notes confirm scheduling was done, full credit even if transcript doesn't mention every item.
+- **SOP Verification Inputs (Third Source of Truth):** The grader may provide manual verification inputs for study schedule, AAMC question packs, and full-length exams. YES = full credit, PARTIAL = 50% credit, NO = 0 points unless transcript or notes confirm otherwise. Any source confirming the item overrides a "No" from another source. These are a fail-safe for when the AI might miss something in the transcript/notes.
 
 ---
 
