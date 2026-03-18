@@ -16,9 +16,9 @@ A. Preparation & Planning Readiness — 18 pts
    18: Test date confirmed, baseline CARS score reviewed, JW mapping principles noted, below-average areas identified
    14: Most elements present  9: Test date/goals only  4: Mostly reactive  0: No prep
 
-B. Study Plan Construction Quality — 27 pts
-   27: 6+ FLs scheduled with dates, AAMC sequencing, weekly checklist, Week 1 daily tasks, HW Tracker link
-   20: Strong plan  14: Exists but lacks specificity  7: General advice only  0: No plan
+B. Study Plan Construction Quality — 30 pts
+   30: 10 FLs scheduled with dates (JW FL 1-6 + AAMC exams), AAMC question pack scheduling (if student has them), weekly checklist, Week 1 daily tasks, HW Tracker link
+   22: Strong plan  15: Exists but lacks specificity  8: General advice only  0: No plan
 
 C. Personalization & Load Calibration — 13 pts
    13: Adapted to availability/timeline  10: Availability acknowledged  6: Some personalization  3: Constraints mentioned  0: None
@@ -31,7 +31,13 @@ E. Clarity & Student Buy-In — 9 pts
    9: Takeaways verbalized; next steps explicit; next session scheduled; HW Tracker explained
    7: Plan summarized  4: Clarity not verified  2: Unclear  0: None
 
-SESSION 1 SOP CHECKLIST: Student Overview completed | Passage video takeaways | 6+ FL exam schedule | AAMC sequencing | Weekly checklist | Week 1 daily tasks | Strategy notes | 2+ video recs | HW Tracker link | Next session date | Fathom forwarded
+SESSION 1 SOP CHECKLIST: Student Overview completed | Passage video takeaways | 10 FL exam schedule (JW FL 1-6 + AAMC exams) | AAMC question packs/resources scheduling (conditional — only if student has them; full credit if student has none) | Weekly checklist | Week 1 daily tasks | Strategy notes | 2+ video recs | HW Tracker link | Next session date | Fathom forwarded
+
+FULL-LENGTH EXAMS vs. AAMC QUESTION PACKS — These are scored SEPARATELY:
+- Full-Length Exams (mandatory): 10 exams must be scheduled. Sources: Jack Westin FL 1-6 + AAMC exams. Keywords: "exam", "full length", "JW FL", "AAMC exam".
+- AAMC Question Packs/Resources (conditional): 10 specific AAMC resources (Bio QP Vol 1&2, Chem QP, Physics QP, CARS QP Vol 1&2, Section Bank, Official Prep Hub Question Bank, CARS Diagnostic Tool, Flashcards). Only required IF student has them. Full credit if student has none.
+- Detection: "AAMC exam" = full-length exam. "AAMC question pack/section bank/flashcards" = AAMC resource.
+- Dual-source rule: Evidence from either transcript or student notes is valid.
 
 SESSION 2 RUBRIC — Adherence & Adjustment (90+60=150, scaled to 100)
 PASS/FAIL GATES: same as Session 1
@@ -147,14 +153,20 @@ UNIVERSAL RULES (all sessions)
 PASS/FAIL GATES (missing any = Needs Remediation):
 Session Notes Template copied and completed | Strategy Portion completed (teach-back occurred) | Study Plan updated | Fathom summary forwarded to Molly Kielty and Anastasia (mark Unable to Verify if not evidenced)
 
-SESSION 1 — Onboarding & Plan Build (90 pts rubric + 60 pts teaching = 150, scaled to 100)
-A. Preparation & Planning Readiness — 18 pts: Baseline reviewed, test date framed, topic gaps identified
-B. Study Plan Construction Quality — 27 pts: Exam schedule, AAMC deadlines, weekly checklist, daily tasks for Week 1
-C. Personalization & Load Calibration — 13 pts: Plan matches availability and constraints
-D. Strategy Portion Execution — 23 pts: Teach-back, feedback, tough questions, plan updates
-E. Clarity & Student Buy-In — 9 pts: Student understands plan and next steps
+SESSION 1 — Onboarding & Plan Build (100 pts rubric + 50 pts teaching = 150, scaled to 100)
+A. Preparation & Planning Readiness — 20 pts: Baseline reviewed, test date framed, topic gaps identified
+B. Study Plan Construction Quality — 30 pts: FL exam schedule (10 exams: JW FL 1-6 + AAMC exams), AAMC question pack scheduling (if student has them), weekly checklist, daily tasks for Week 1
+C. Personalization & Load Calibration — 15 pts: Plan matches availability and constraints
+D. Strategy Portion Execution — 25 pts: Teach-back, feedback, tough questions, plan updates
+E. Clarity & Student Buy-In — 10 pts: Student understands plan and next steps
 
-Required in Session 1 notes: Exam schedule | AAMC deadlines | Below-average topics (excluding course-covered) | Weekly checklist | Daily tasks Week 1 | Strategy portion notes | Tentative next session date
+Required in Session 1 notes: FL exam schedule (10 exams) | AAMC question packs/resources scheduling (conditional — if student has them) | Below-average topics (excluding course-covered) | Weekly checklist | Daily tasks Week 1 | Strategy portion notes | Tentative next session date
+
+FULL-LENGTH EXAMS vs. AAMC QUESTION PACKS — scored SEPARATELY:
+- Full-Length Exams (mandatory): 10 exams. Sources: Jack Westin FL 1-6, AAMC exams. Keywords: "exam", "full length", "JW FL", "AAMC exam".
+- AAMC Question Packs/Resources (conditional): Bio QP Vol 1&2, Chem QP, Physics QP, CARS QP Vol 1&2, Section Bank, Official Prep Hub Question Bank, CARS Diagnostic Tool, Flashcards. Only if student has them. Full credit if student has none.
+- "AAMC exam" = full-length exam. "AAMC question pack/section bank/flashcards" = AAMC resource.
+- Dual-source rule: Evidence from either transcript or student notes is valid.
 
 SESSION 2 — Adherence & Adjustment (90 pts + 60 teaching = 150, scaled to 100)
 A. Prep & Data Review — 14 pts: Checklist reviewed prior to meeting

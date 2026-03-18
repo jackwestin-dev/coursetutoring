@@ -17,8 +17,8 @@ SECTION 1: QUICK VERDICT
 
 Top 3 Fixes
 
-1. Create a proper Google Doc with student snapshot, study schedule, AAMC sequencing, and weekly/daily task breakdown
-2. Document the exam schedule explicitly (11 total FLs with dates and which tests to take when)
+1. Create a proper Google Doc with student snapshot, study schedule, FL exam dates, AAMC question pack scheduling, and weekly/daily task breakdown
+2. Document the FL exam schedule explicitly (10 FLs: JW FL 1-6 + AAMC exams, with dates for each)
 3. Add below-average topic list with specific daily/weekly assignments for Chem/Phys and Bio/Biochem remediation
 
 ________________________________________________________________________________
@@ -44,11 +44,11 @@ B. Study Plan Construction Quality
 Score: 4/10
 
 Justification:
-The transcript shows verbal discussion of exam scheduling (JW FLs first, AAMC last 6 weeks), but the notes contain zero structured study plan. No weekly checklist, no AAMC material deadlines, and no daily task assignments are documented. The only "action items" captured are vague one-liners without specific assignments.
+The transcript shows verbal discussion of exam scheduling (JW FLs first, AAMC last 6 weeks), but the notes contain zero structured study plan. No weekly checklist, no AAMC question pack scheduling, and no daily task assignments are documented. The only "action items" captured are vague one-liners without specific assignments.
 
 Missing from Notes:
-- Practice exam schedule (dates for all 11 exams)
-- AAMC sequencing and deadlines
+- FL exam schedule (dates for all 10 future exams: JW FL 1-6 + AAMC exams)
+- AAMC question packs/resources scheduling (if student has them)
 - Weekly checklist/priorities
 - Daily tasks for Week 1
 - Chapters to review
@@ -105,7 +105,7 @@ SECTION 3: SOP COMPLIANCE CHECKLIST (NOTES-BASED)
 | SOP Item                                         | Present in Notes? | Evidence Quote from Notes                                                                                |
 |--------------------------------------------------|-------------------|----------------------------------------------------------------------------------------------------------|
 | Exam schedule                                    | No                | (Not documented—only discussed verbally)                                                                 |
-| AAMC sequencing/deadlines                        | No                | (Not documented—tutor said "last six weeks" verbally only)                                               |
+| AAMC question packs/resources scheduling          | No                | (Not documented—tutor said "last six weeks" verbally only)                                               |
 | Below-average topics (excluding course-covered)  | No                | (Discussed Chem/Phys weakness but not listed in notes)                                                   |
 | Weekly checklist                                 | No                | (No checklist in notes)                                                                                  |
 | Daily tasks for Week 1                           | Partial           | "Take Jack Westin FL on Feb 7; review w/ tracker; test stop-the-clock breaks"                            |
@@ -201,9 +201,9 @@ Practice Exam Schedule (11 Total)
 
 ________________________________________________________________________________
 
-AAMC Plan
+AAMC Question Packs/Resources Plan
 
-- AAMC FLs: Start end of February (last 6 weeks before test)
+(Only applicable if student has these resources)
 - Section Banks: Integrate during AAMC FL phase for targeted practice
 - Q-Packs: Use for supplemental topic review as needed
 - Deadline: All AAMC material completed by April 9
