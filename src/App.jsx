@@ -141,58 +141,97 @@ OUTPUT — produce exactly this markdown:
 
 Bands: 90-100=Exceeds, 75-89=Meets, 60-74=Needs Minor Calibration, <60=Needs Remediation. Any failed gate=Needs Remediation.`;
 
-// 515+ Course & Intensive — original rubric (Tutoring Session Grading & Feedback SOP)
-const ORIGINAL_GRADING_PROMPT = `You are the JW Session Grader for the 515+ MCAT Course and Intensive course. Grade using the standard tutoring session rubric (NOT the CARS-specific rubric).
+// 515+ Course & Intensive — 4-category 135-point rubric (Sessions 1-3)
+const ORIGINAL_GRADING_PROMPT = `You are the JW Session Grader for the 515+ MCAT Course and Intensive course. Grade using the 515+/Intensive 135-point rubric (NOT the CARS-specific rubric).
 
-UNIVERSAL RULES (all sessions)
-- Grade the NOTES primarily; transcript shows what should be documented and session quality.
-- Evidence must be explicit. No credit for implied content. Partial credit when partial documentation exists.
-- Any category without concrete evidence loses 50% of its points.
-- Strategy Portion receives 0 points if teach-back does not occur.
-- Missing any Pass/Fail Gate → Needs Remediation regardless of score.
-- AAMC DUAL-SOURCE RULE: For AAMC scheduling/deadlines, check BOTH the transcript AND the student notes document. If EITHER source confirms AAMC materials were assigned/scheduled/completed, award full credit. Only deduct if BOTH sources fail to confirm. The student notes document saying "yes" to assigning all AAMC documents is sufficient on its own.
-- SOP VERIFICATION INPUTS (THIRD SOURCE OF TRUTH): The grader may provide manual SOP verification inputs for: study schedule, AAMC question packs, and full-length exams. These are a fail-safe alongside transcript and student notes. Scoring: YES = full credit for that sub-item, PARTIAL = 50% credit, NO = 0 points UNLESS transcript or student notes confirm otherwise. Any source confirming the item can override a "No" from another source.
-
-PASS/FAIL GATES (missing any = Needs Remediation):
-Session Notes Template copied and completed | Strategy Portion completed (teach-back occurred) | Study Plan updated | Fathom summary forwarded to Molly Kielty and Anastasia (mark Unable to Verify if not evidenced)
-
-SESSION 1 — Onboarding & Plan Build (100 pts rubric + 50 pts teaching = 150, scaled to 100)
-A. Preparation & Planning Readiness — 20 pts: Baseline reviewed, test date framed, topic gaps identified
-B. Study Plan Construction Quality — 30 pts: FL exam schedule (10 exams: JW FL 1-6 + AAMC exams), AAMC question pack scheduling (if student has them), weekly checklist, daily tasks for Week 1
-C. Personalization & Load Calibration — 15 pts: Plan matches availability and constraints
-D. Strategy Portion Execution — 25 pts: Teach-back, feedback, tough questions, plan updates
-E. Clarity & Student Buy-In — 10 pts: Student understands plan and next steps
-
-Required in Session 1 notes: FL exam schedule (10 exams) | AAMC question packs/resources scheduling (conditional — if student has them) | Below-average topics (excluding course-covered) | Weekly checklist | Daily tasks Week 1 | Strategy portion notes | Tentative next session date
+CORE GRADING RULES
+1. Grade the NOTES primarily. Transcript reveals what SHOULD be documented and assesses live coaching quality.
+2. Evidence must be explicit. No credit for implied content.
+3. Score conservatively when uncertain.
+4. AAMC DUAL-SOURCE RULE: For AAMC scheduling, check BOTH the transcript AND the student notes document. If EITHER source confirms AAMC materials were assigned/scheduled/completed, award full credit. Only deduct if BOTH sources fail to confirm.
+5. SOP VERIFICATION INPUTS (THIRD SOURCE OF TRUTH): The grader may provide manual SOP verification inputs for: study schedule, AAMC question packs, and full-length exams. Scoring: YES = full credit, PARTIAL = 50% credit, NO = 0 points UNLESS transcript or student notes confirm otherwise. Any source confirming the item can override a "No" from another source.
+6. Most items are BINARY: full points or zero. Did it or didn't. Partial credit ONLY where explicitly noted.
+7. Three sources of truth: transcript, student notes document, and manual SOP verification inputs. If ANY source confirms an item, give credit.
 
 FULL-LENGTH EXAMS vs. AAMC QUESTION PACKS — scored SEPARATELY:
-- Full-Length Exams (mandatory): 10 exams. Sources: Jack Westin FL 1-6, AAMC exams. Keywords: "exam", "full length", "JW FL", "AAMC exam".
-- AAMC Question Packs/Resources (conditional): Bio QP Vol 1&2, Chem QP, Physics QP, CARS QP Vol 1&2, Section Bank, Official Prep Hub Question Bank, CARS Diagnostic Tool, Flashcards. Only if student has them. Full credit if student has none.
-- "AAMC exam" = full-length exam. "AAMC question pack/section bank/flashcards" = AAMC resource.
-- Dual-source rule: Evidence from either transcript or student notes is valid.
-- CRITICAL DEFAULT DATE: The student notes sheet has a default/placeholder date of "March 5" (Mar 5, 3/5, 03/05) pre-filled in the Planned Date column. If exams show this date, the tutor did NOT schedule them — they left the default. Exams with March 5th do NOT count as scheduled. Only exams with dates OTHER than March 5th count. If all/most exams show March 5th, award zero for FL scheduling.
+- Full-Length Exams (mandatory): 10 exams scheduled with real dates. Sources: Jack Westin FL 1-6 + AAMC exams.
+- AAMC Question Packs/Resources (conditional): Bio QP Vol 1&2, Chem QP, Physics QP, CARS QP Vol 1&2, Section Bank, Official Prep Hub, CARS Diagnostic Tool, Flashcards. Only if student has them. Auto full credit if student has none.
+- CRITICAL DEFAULT DATE: "March 5" (Mar 5, 3/5, 03/05) is a placeholder date pre-filled in the student notes sheet. Exams with March 5th do NOT count as scheduled. Only exams with dates OTHER than March 5th count. If all/most exams show March 5th, award zero for FL scheduling.
 
-SESSION 2 — Adherence & Adjustment (90 pts + 60 teaching = 150, scaled to 100)
-A. Prep & Data Review — 14 pts: Checklist reviewed prior to meeting
-B. Accountability & Reflection Execution — 23 pts: Reflection survey used to diagnose roadblocks
-C. Plan Adjustment Quality — 18 pts: Adjustments specific and constraint-aware
-D. Time Management Coaching — 14 pts: Concrete pacing or scheduling changes
-E. Strategy Portion Execution — 21 pts: Teach-back, feedback, assignments added
+=== RUBRIC: 4 CATEGORIES, 135 POINTS TOTAL ===
 
-Required in Session 2 notes: Weekly checklist completion status | Roadblocks + interventions | Updated study schedule | Strategy notes | Next session tentatively scheduled
+## A. SOP COMPLIANCE — 50 Points
 
-SESSION 3 — Timed Pressure & Diagnostics (90 pts + 60 teaching = 150, scaled to 100)
-A. Diagnostic Design Quality — 18 pts: Weakest section selected, instructions clear
-B. Accountability Enforcement — 18 pts: Completion + review + reflections enforced
-C. Timing & Accuracy Analysis — 23 pts: Data entered, insights specific
-D. Personalized Coaching Using Visuals — 13 pts: Visual timing guidance + rules
-E. Strategy Portion Execution — 18 pts: Teach-back + targeted practice assigned
+### A1. Session Structure & Timing (10 pts)
+- Follows SOP time blocks (intro, strategy, wrap-up) — 4 pts [binary]
+- Covers all required agenda items for that session — 4 pts [binary]
+- Doesn't skip or rush wrap-up section — 2 pts [binary]
 
-Required in Session 3 notes: Reflection responses | Timing and accuracy insights | Personalized timing advice | Updated Study Plan to test day
+### A2. Study Schedule & Exam Planning (14 pts)
+- Study schedule created in Google Sheet — 4 pts [binary]
+- 10 full-length exams scheduled with real dates (NOT March 5 placeholders) — 6 pts [proportional credit allowed: e.g. 7/10 exams = ~4 pts]
+- AAMC question packs assigned (if student has them; auto full credit if student doesn't) — 4 pts [binary]
 
-TEACHING & LEARNING (60 pts, from transcript): Approachability 12 | Science Passage Framing 18 | CARS Passage Framing 18 | Student Metacognition 12
+### A3. Pre-Session & Post-Session Tasks (12 pts)
+- Pre-session notes completed before session — 3 pts [binary]
+- Student overview/survey data reviewed — 3 pts [binary]
+- Post-session: in-session notes completed — 3 pts [binary]
+- Post-session: notes shared with directors — 3 pts [binary]
 
-OUTPUT — produce exactly this markdown:
+### A4. Session-Specific Requirements (14 pts) — ONLY evaluate items for the actual session number:
+- S1 ONLY: Booking link shared for next session — 3 pts [binary]
+- S1 ONLY: 2+ strategy videos recommended — 3 pts [binary]
+- S2 ONLY: FL review process coached — 4 pts [binary]
+- S3 ONLY: Test-day toolkit verbalized by student — 4 pts [binary]
+Session 1 max for A4: 6 pts (booking link 3 + videos 3). Session 2 max for A4: 4 pts. Session 3 max for A4: 4 pts.
+Remaining points in A4 for sessions that don't use all 14 are simply not scored — do NOT penalize.
+
+## B. COACHING QUALITY — 50 Points
+
+### B1. Socratic Method & Guided Questioning (15 pts)
+- Uses probing questions vs. lecturing — 5 pts [binary]
+- Student does most of the talking — 5 pts [binary]
+- Doesn't re-map passages for the student — 5 pts [binary]
+
+### B2. Weakness Identification & Feedback (15 pts)
+- Clearly identifies missed question reasons — 5 pts [binary]
+- Doesn't let excuses slide — 5 pts [binary]
+- Provides actionable, specific strategies — 5 pts [binary]
+
+### B3. Passage Practice Execution (10 pts)
+- 3+ questions reviewed together — 4 pts [binary]
+- Student teaches passage back (not tutor) — 3 pts [binary]
+- Constructive feedback ~once per paragraph — 3 pts [binary]
+
+### B4. Student Engagement & Takeaways (10 pts)
+- Asks student for main takeaway(s) — 4 pts [binary]
+- Asks if student has questions/concerns — 3 pts [binary]
+- Addresses timing AND accuracy (not just one) — 3 pts [binary]
+
+## C. NOTES & DOCUMENTATION — 20 Points
+- Student notes template properly named and linked — 3 pts [binary]
+- Student Overview tab completed — 3 pts [binary]
+- In-session notes are detailed and specific — 5 pts [binary]
+- Exam Progress tab updated — 3 pts [binary]
+- Next steps clearly written (not just verbal) — 3 pts [binary]
+- Added to Activity Completion Tracking (Col M) — 3 pts [binary]
+
+## D. PROFESSIONALISM — 15 Points
+- Calm, confident, supportive demeanor — 3 pts [binary]
+- Doesn't guarantee outcomes or promise scores — 3 pts [binary]
+- Refers students to proper channels (not pricing) — 3 pts [binary]
+- Session starts/ends on time — 3 pts [binary]
+- Communication on approved platforms only — 3 pts [binary]
+
+=== GRADE SCALE ===
+Excellent: 120-135 (89-100%) — Covers all SOP items, strong coaching, thorough documentation
+Satisfactory: 100-119 (74-88%) — Minor gaps but fundamentally solid session
+Needs Improvement: 80-99 (59-73%) — Multiple SOP items missed or coaching quality concerns
+Unsatisfactory: Below 80 (<59%) — Significant SOP non-compliance or poor coaching
+
+=== OUTPUT FORMAT ===
+Produce exactly this markdown:
+
 ---
 ## SECTION 1: QUICK VERDICT
 | Field | Value |
@@ -201,14 +240,8 @@ OUTPUT — produce exactly this markdown:
 | Tutor | [name] |
 | Session | [1/2/3] |
 | Session Date | [date] |
-| Overall Rating | [Exceeds Expectations / Meets Expectations / Needs Minor Calibration / Needs Remediation] |
+| Overall Rating | [Excellent / Satisfactory / Needs Improvement / Unsatisfactory] |
 | Biggest Risk | [1 sentence] |
-
-**Pass/Fail Gates:**
-- Notes Template: [PASS / FAIL]
-- Strategy Portion: [PASS / FAIL]
-- Study Plan Updated: [PASS / FAIL]
-- Fathom Forwarded: [Unable to Verify / PASS / FAIL]
 
 **Top 3 Fixes:**
 1. [fix]
@@ -217,38 +250,92 @@ OUTPUT — produce exactly this markdown:
 
 ---
 ## SECTION 2: CATEGORY SCORES
-### A. [Name] — [score]/[max] pts
-**Justification:** [evidence-based observation]
-**Next step:** [actionable next step]
-**Missing from Notes:**
-- [bullets]
-[repeat B–E]
+
+### A. SOP Compliance — [score]/50 pts
+#### A1. Session Structure & Timing — [score]/10
+| Item | Pts | Awarded | Evidence |
+|------|-----|---------|----------|
+| Follows SOP time blocks | 4 | [0 or 4] | [evidence] |
+| Covers all required agenda items | 4 | [0 or 4] | [evidence] |
+| Doesn't skip/rush wrap-up | 2 | [0 or 2] | [evidence] |
+
+#### A2. Study Schedule & Exam Planning — [score]/14
+| Item | Pts | Awarded | Evidence |
+|------|-----|---------|----------|
+| Study schedule in Google Sheet | 4 | [0 or 4] | [evidence] |
+| 10 FLs scheduled with real dates | 6 | [0-6] | [evidence, note March 5 detection] |
+| AAMC question packs assigned | 4 | [0 or 4] | [evidence or "auto full credit — student has none"] |
+
+#### A3. Pre-Session & Post-Session Tasks — [score]/12
+| Item | Pts | Awarded | Evidence |
+|------|-----|---------|----------|
+| Pre-session notes completed | 3 | [0 or 3] | [evidence] |
+| Student overview/survey reviewed | 3 | [0 or 3] | [evidence] |
+| In-session notes completed | 3 | [0 or 3] | [evidence] |
+| Notes shared with directors | 3 | [0 or 3] | [evidence] |
+
+#### A4. Session-Specific Requirements — [score]/[session max]
+[Only list items for this session number]
+| Item | Pts | Awarded | Evidence |
+|------|-----|---------|----------|
+| [session-specific item] | X | [0 or X] | [evidence] |
+
+### B. Coaching Quality — [score]/50 pts
+#### B1. Socratic Method & Guided Questioning — [score]/15
+| Item | Pts | Awarded | Evidence |
+|------|-----|---------|----------|
+| Uses probing questions vs. lecturing | 5 | [0 or 5] | [evidence] |
+| Student does most of the talking | 5 | [0 or 5] | [evidence] |
+| Doesn't re-map passages for student | 5 | [0 or 5] | [evidence] |
+
+#### B2. Weakness Identification & Feedback — [score]/15
+| Item | Pts | Awarded | Evidence |
+|------|-----|---------|----------|
+| Clearly identifies missed question reasons | 5 | [0 or 5] | [evidence] |
+| Doesn't let excuses slide | 5 | [0 or 5] | [evidence] |
+| Provides actionable, specific strategies | 5 | [0 or 5] | [evidence] |
+
+#### B3. Passage Practice Execution — [score]/10
+| Item | Pts | Awarded | Evidence |
+|------|-----|---------|----------|
+| 3+ questions reviewed together | 4 | [0 or 4] | [evidence] |
+| Student teaches passage back | 3 | [0 or 3] | [evidence] |
+| Feedback ~once per paragraph | 3 | [0 or 3] | [evidence] |
+
+#### B4. Student Engagement & Takeaways — [score]/10
+| Item | Pts | Awarded | Evidence |
+|------|-----|---------|----------|
+| Asks student for main takeaway(s) | 4 | [0 or 4] | [evidence] |
+| Asks if student has questions/concerns | 3 | [0 or 3] | [evidence] |
+| Addresses timing AND accuracy | 3 | [0 or 3] | [evidence] |
+
+### C. Notes & Documentation — [score]/20 pts
+| Item | Pts | Awarded | Evidence |
+|------|-----|---------|----------|
+| Notes template properly named/linked | 3 | [0 or 3] | [evidence] |
+| Student Overview tab completed | 3 | [0 or 3] | [evidence] |
+| In-session notes detailed and specific | 5 | [0 or 5] | [evidence] |
+| Exam Progress tab updated | 3 | [0 or 3] | [evidence] |
+| Next steps clearly written | 3 | [0 or 3] | [evidence] |
+| Added to Activity Completion Tracking | 3 | [0 or 3] | [evidence] |
+
+### D. Professionalism — [score]/15 pts
+| Item | Pts | Awarded | Evidence |
+|------|-----|---------|----------|
+| Calm, confident, supportive demeanor | 3 | [0 or 3] | [evidence] |
+| Doesn't guarantee outcomes/scores | 3 | [0 or 3] | [evidence] |
+| Refers to proper channels (not pricing) | 3 | [0 or 3] | [evidence] |
+| Session starts/ends on time | 3 | [0 or 3] | [evidence] |
+| Communication on approved platforms | 3 | [0 or 3] | [evidence] |
 
 ---
-## SECTION 3: SOP COMPLIANCE CHECKLIST
-| SOP Item | Status | Evidence |
-|----------|--------|----------|
-[all items]
-**Compliance Summary:** [X] fully met, [Y] partial, [Z] missing
-
----
-## SECTION 4: TRANSCRIPT COACHING QUALITY (Teaching & Learning)
-| Behavior | Score | Observation |
-|----------|-------|-------------|
-| Approachability | X/12 | [evidence] |
-| Science Passage Framing | X/18 | [evidence] |
-| CARS Passage Framing | X/18 | [evidence] |
-| Student Metacognition | X/12 | [evidence] |
-| **Subtotal** | **X/60** | |
-
----
-## SECTION 5: TRANSCRIPT vs. NOTES GAP ANALYSIS
+## SECTION 3: TRANSCRIPT vs. NOTES GAP ANALYSIS
 | Topic Discussed | In Notes? | Impact |
 |-----------------|-----------|--------|
 [key topics]
 
 ---
-## SECTION 6: TUTOR FEEDBACK
+## SECTION 4: TUTOR FEEDBACK
 ### What You Did Well
 1. [positive with evidence]
 2. [positive with evidence]
@@ -260,37 +347,43 @@ OUTPUT — produce exactly this markdown:
    - How to fix: [guidance]
 
 ---
-## SECTION 7: FINAL SCORE SUMMARY
+## SECTION 5: FINAL SCORE SUMMARY
 | Category | Score | Max |
 |----------|-------|-----|
-| A. [Name] | X | XX |
-[repeat B–E]
-| Teaching & Learning | X | 60 |
-| **TOTAL** | **X** | **150** |
-**Scaled Score:** X/100
-**Overall Assessment:** [rating]
+| A. SOP Compliance | X | 50 |
+|   A1. Session Structure & Timing | X | 10 |
+|   A2. Study Schedule & Exam Planning | X | 14 |
+|   A3. Pre/Post-Session Tasks | X | 12 |
+|   A4. Session-Specific Requirements | X | [session max] |
+| B. Coaching Quality | X | 50 |
+|   B1. Socratic Method | X | 15 |
+|   B2. Weakness Identification | X | 15 |
+|   B3. Passage Practice | X | 10 |
+|   B4. Student Engagement | X | 10 |
+| C. Notes & Documentation | X | 20 |
+| D. Professionalism | X | 15 |
+| **TOTAL** | **X** | **135** |
+**Overall Assessment:** [Excellent / Satisfactory / Needs Improvement / Unsatisfactory]
 **Summary:** [3-4 sentences]
 
-Bands: 90-100=Exceeds, 75-89=Meets, 60-74=Needs Minor Calibration, <60=Needs Remediation. Any failed gate=Needs Remediation.`;
+Grade Scale: 120-135=Excellent, 100-119=Satisfactory, 80-99=Needs Improvement, <80=Unsatisfactory.`;
 
 const EMAIL_PROMPT = `You are a professional email writer for Jack Westin's MCAT tutoring program. Given a grading report, produce TWO emails as JSON only — no markdown fences, no preamble:
 {"tutorEmail":{"subject":"...","body":"..."},"managementEmail":{"subject":"...","body":"..."}}
 
 TUTOR EMAIL: Subject "Session [N] Grading Report — [Student Name]". Address tutor by first name. Open with 1-2 sentences on what they did well. Then full graded report in plain text: SESSION [N] GRADING REPORT / Student/Tutor/Date / QUICK VERDICT (rating, score, risk, top 3 fixes) / CATEGORY SCORES A-E (score, justification, missing items) / SOP CHECKLIST / COACHING QUALITY / TUTOR FEEDBACK (what went well + areas for improvement) / FINAL SCORE. Close warmly. Sign: "The JW QA Team"
 
-MANAGEMENT EMAIL: Subject "Session [N] QA — [Tutor Name] | [Score]/100 | [Rating]". Open with TRIAGE block:
+MANAGEMENT EMAIL: Subject "Session [N] QA — [Tutor Name] | [Score]/[Max] | [Rating]". Use the SCORE and MAX provided in the input (e.g. 95/135 or 82/100). Open with TRIAGE block:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 TRIAGE SUMMARY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Tutor: [name] | Student: [name] | Session: [N] | Date: [date]
-Score: [X]/100 | Rating: [rating]
+Score: [X]/[Max] | Rating: [rating]
 Action Required: [YES — immediate follow-up / MONITOR — check next session / NONE — on track]
 
-SCORE BAND GUIDE
-90-100 → Exceeds Expectations     — No action needed
-75-89  → Meets Expectations       — Monitor progress
-60-74  → Needs Minor Calibration  — Provide targeted coaching
-<60    → Needs Remediation        — Immediate manager follow-up required
+SCORE BAND GUIDE (use whichever matches the rubric):
+For CARS (/100): 90-100 Exceeds | 75-89 Meets | 60-74 Coach | <60 Remediate
+For 515+/Intensive (/135): 120-135 Excellent | 100-119 Satisfactory | 80-99 Needs Improvement | <80 Unsatisfactory
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Then 3-5 sentence management summary. Then divider + full tutor email draft. Sign: "JW QA System — automated report"`;
 
@@ -377,15 +470,19 @@ function RatingBadge({ rating }) {
     "Meets Expectations":      { bg: "#eff6ff", color: "#2563eb", border: "#bfdbfe" },
     "Needs Minor Calibration": { bg: "#fffbeb", color: "#d97706", border: "#fde68a" },
     "Needs Remediation":       { bg: "#fef2f2", color: "#dc2626", border: "#fecaca" },
+    "Excellent":               { bg: "#f0fdf4", color: "#16a34a", border: "#bbf7d0" },
+    "Satisfactory":            { bg: "#eff6ff", color: "#2563eb", border: "#bfdbfe" },
+    "Needs Improvement":       { bg: "#fffbeb", color: "#d97706", border: "#fde68a" },
+    "Unsatisfactory":          { bg: "#fef2f2", color: "#dc2626", border: "#fecaca" },
   };
-  const s = map[rating] || map["Meets Expectations"];
+  const s = map[rating] || map["Satisfactory"];
   return <span style={{ display: "inline-flex", alignItems: "center", padding: "5px 12px", borderRadius: 20, background: s.bg, color: s.color, border: `1px solid ${s.border}`, fontSize: 12, fontWeight: 700 }}>{rating}</span>;
 }
 
-function ScoreRing({ score }) {
-  const pct = Math.min(100, score || 0);
+function ScoreRing({ score, maxScore = 100 }) {
+  const pct = Math.min(100, ((score || 0) / maxScore) * 100);
   const r = 34, circ = 2 * Math.PI * r, dash = (pct / 100) * circ;
-  const color = pct >= 90 ? "#16a34a" : pct >= 75 ? "#8A5CF6" : pct >= 60 ? "#d97706" : "#dc2626";
+  const color = pct >= 89 ? "#16a34a" : pct >= 74 ? "#8A5CF6" : pct >= 59 ? "#d97706" : "#dc2626";
   return (
     <div style={{ position: "relative", width: 88, height: 88, flexShrink: 0 }}>
       <svg width={88} height={88} style={{ transform: "rotate(-90deg)" }}>
@@ -394,7 +491,7 @@ function ScoreRing({ score }) {
       </svg>
       <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
         <span style={{ fontSize: 19, fontWeight: 800, color: "#2B2F40", lineHeight: 1 }}>{score}</span>
-        <span style={{ fontSize: 10, color: "#5E6573", fontWeight: 500 }}>/100</span>
+        <span style={{ fontSize: 10, color: "#5E6573", fontWeight: 500 }}>/{maxScore}</span>
       </div>
     </div>
   );
@@ -493,10 +590,12 @@ export default function CARSGrader() {
           i++; continue;
         }
         if (/^Score:\s*.+\|\s*Rating:/i.test(t)) {
-          const scoreMatch = t.match(/Score:\s*(\d+)\/100\s*\|\s*Rating:\s*(.+)/i);
+          const scoreMatch = t.match(/Score:\s*(\d+)\/(\d+)\s*\|\s*Rating:\s*(.+)/i);
           const scoreNum = scoreMatch ? parseInt(scoreMatch[1], 10) : null;
-          const scoreColor = scoreNum != null ? (scoreNum >= 90 ? "#16a34a" : scoreNum >= 75 ? "#8A5CF6" : scoreNum >= 60 ? "#d97706" : "#dc2626") : "#5E6573";
-          parts.push(`<p style="margin:10px 0 6px;font-size:13px"><span style="${labelStyle}">Score:</span><span style="font-weight:700;color:${scoreColor};margin-right:12px">${scoreMatch ? scoreMatch[1] + "/100" : ""}</span><span style="${labelStyle}">Rating:</span><span style="color:#2B2F40">${scoreMatch ? esc(scoreMatch[2].trim()) : esc(t)}</span></p>`);
+          const scoreMax = scoreMatch ? parseInt(scoreMatch[2], 10) : 100;
+          const scorePctLocal = scoreNum != null ? (scoreNum / scoreMax) * 100 : 0;
+          const scoreColor = scoreNum != null ? (scorePctLocal >= 89 ? "#16a34a" : scorePctLocal >= 74 ? "#8A5CF6" : scorePctLocal >= 59 ? "#d97706" : "#dc2626") : "#5E6573";
+          parts.push(`<p style="margin:10px 0 6px;font-size:13px"><span style="${labelStyle}">Score:</span><span style="font-weight:700;color:${scoreColor};margin-right:12px">${scoreMatch ? scoreMatch[1] + "/" + scoreMatch[2] : ""}</span><span style="${labelStyle}">Rating:</span><span style="color:#2B2F40">${scoreMatch ? esc(scoreMatch[3].trim()) : esc(t)}</span></p>`);
           i++; continue;
         }
         if (/^Action Required:/i.test(t)) {
@@ -592,9 +691,16 @@ export default function CARSGrader() {
       return parts.join("\n");
     };
 
+    const is135 = sessionMeta.courseType && sessionMeta.courseType !== "CARS Strategy";
+    const maxPts = is135 ? 135 : 100;
     let scoreNum = sessionMeta.score != null && sessionMeta.score !== "" ? Number(sessionMeta.score) : null;
     if (scoreNum == null || Number.isNaN(scoreNum)) {
-      const reportScorePatterns = [
+      const reportScorePatterns = is135 ? [
+        /\*\*TOTAL\*\*\s*\|\s*\*\*(\d+)\*\*\s*\|\s*\*\*135\*\*/i,
+        /TOTAL[^|]*\|\s*(\d+)\s*\|\s*135/i,
+        /Score[^0-9]*(\d+)\s*\/\s*135/i,
+        /Score[^0-9]*(\d+)\s*\/\s*100/i,
+      ] : [
         /Scaled Score[^:*\n]*:?\*?\s*(\d+)\s*\/\s*100/i,
         /\*\*Scaled Score\*\*:\s*(\d+)/i,
         /FINAL SCORE[:\s]+(\d+)\s*[\/\-]\s*100/i,
@@ -606,7 +712,7 @@ export default function CARSGrader() {
         const m = (reportText || "").match(re);
         if (m) {
           const n = parseInt(m[1], 10);
-          if (n >= 0 && n <= 100) {
+          if (n >= 0 && n <= maxPts) {
             scoreNum = n;
             break;
           }
@@ -614,16 +720,21 @@ export default function CARSGrader() {
       }
     }
     const scoreDisplay = scoreNum != null && !Number.isNaN(scoreNum) ? String(scoreNum) : "—";
+    const scorePct = scoreNum != null && !Number.isNaN(scoreNum) ? (scoreNum / maxPts) * 100 : 0;
     const scoreColor = scoreNum != null && !Number.isNaN(scoreNum)
-      ? (scoreNum >= 90 ? "#16a34a" : scoreNum >= 75 ? "#8A5CF6" : scoreNum >= 60 ? "#d97706" : "#dc2626")
+      ? (scorePct >= 89 ? "#16a34a" : scorePct >= 74 ? "#8A5CF6" : scorePct >= 59 ? "#d97706" : "#dc2626")
       : "#9CA3AF";
     const ratingColors = {
       "Exceeds Expectations":    { bg: "#f0fdf4", color: "#16a34a", border: "#bbf7d0" },
       "Meets Expectations":      { bg: "#eff6ff", color: "#2563eb", border: "#bfdbfe" },
       "Needs Minor Calibration": { bg: "#fffbeb", color: "#d97706", border: "#fde68a" },
       "Needs Remediation":       { bg: "#fef2f2", color: "#dc2626", border: "#fecaca" },
+      "Excellent":               { bg: "#f0fdf4", color: "#16a34a", border: "#bbf7d0" },
+      "Satisfactory":            { bg: "#eff6ff", color: "#2563eb", border: "#bfdbfe" },
+      "Needs Improvement":       { bg: "#fffbeb", color: "#d97706", border: "#fde68a" },
+      "Unsatisfactory":          { bg: "#fef2f2", color: "#dc2626", border: "#fecaca" },
     };
-    const rc = ratingColors[sessionMeta.rating] || ratingColors["Meets Expectations"];
+    const rc = ratingColors[sessionMeta.rating] || ratingColors["Satisfactory"];
 
     return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif">
@@ -643,7 +754,7 @@ export default function CARSGrader() {
   <table style="width:100%"><tr>
     <td style="width:100px;text-align:center;vertical-align:middle">
       <div style="display:inline-block;width:80px;height:80px;border-radius:50%;border:6px solid ${scoreColor};text-align:center;line-height:68px">
-        <span style="font-size:24px;font-weight:800;color:#2B2F40">${scoreDisplay}</span><span style="font-size:11px;color:#5E6573">/100</span>
+        <span style="font-size:24px;font-weight:800;color:#2B2F40">${scoreDisplay}</span><span style="font-size:11px;color:#5E6573">/${maxPts}</span>
       </div>
     </td>
     <td style="vertical-align:middle;padding-left:18px">
@@ -678,10 +789,17 @@ ${tutorEmailBody ? `
 <!-- Score bands legend -->
 <div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:0 0 14px 14px;padding:14px 18px;margin-top:0;text-align:center">
   <span style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#5E6573">Score bands: </span>
+  ${is135 ? `
+  <span style="padding:3px 8px;border-radius:6px;background:#f0fdf4;border:1px solid #bbf7d0;font-size:11px;color:#16a34a;font-weight:600">120–135 Excellent</span>
+  <span style="padding:3px 8px;border-radius:6px;background:#eff6ff;border:1px solid #bfdbfe;font-size:11px;color:#2563eb;font-weight:600;margin-left:4px">100–119 Satisfactory</span>
+  <span style="padding:3px 8px;border-radius:6px;background:#fffbeb;border:1px solid #fde68a;font-size:11px;color:#d97706;font-weight:600;margin-left:4px">80–99 Needs Improvement</span>
+  <span style="padding:3px 8px;border-radius:6px;background:#fef2f2;border:1px solid #fecaca;font-size:11px;color:#dc2626;font-weight:600;margin-left:4px">&lt;80 Unsatisfactory</span>
+  ` : `
   <span style="padding:3px 8px;border-radius:6px;background:#f0fdf4;border:1px solid #bbf7d0;font-size:11px;color:#16a34a;font-weight:600">90–100 Exceeds</span>
   <span style="padding:3px 8px;border-radius:6px;background:#eff6ff;border:1px solid #bfdbfe;font-size:11px;color:#2563eb;font-weight:600;margin-left:4px">75–89 Meets</span>
   <span style="padding:3px 8px;border-radius:6px;background:#fffbeb;border:1px solid #fde68a;font-size:11px;color:#d97706;font-weight:600;margin-left:4px">60–74 Coach</span>
   <span style="padding:3px 8px;border-radius:6px;background:#fef2f2;border:1px solid #fecaca;font-size:11px;color:#dc2626;font-weight:600;margin-left:4px">&lt;60 Remediate</span>
+  `}
 </div>
 
 <p style="text-align:center;font-size:11px;color:#9CA3AF;margin-top:18px">Sent by JW Session Grader · Internal QA Tool</p>
@@ -715,33 +833,46 @@ ${tutorEmailBody ? `
       setReport(gradeText);
 
       let ps = null;
-      const scorePatterns = [
+      const isCars = form.courseType === "cars";
+      const scorePatterns = isCars ? [
         /Scaled Score[^:*\n]*:?\*?\s*(\d+)\s*\/\s*100/i,
         /\*\*Scaled Score\*\*:\s*(\d+)/i,
         /FINAL SCORE[:\s]+(\d+)\s*[\/\-]\s*100/i,
         /(\d+)\s*\/\s*100\s*[—\-]\s*(?:Exceeds|Meets|Needs)/i,
         /\|\s*\*\*(\d+)\*\*\s*\|\s*\*\*100\*\*/i,
         /Score[^0-9]*(\d+)\s*\/\s*100/i,
+      ] : [
+        /\*\*TOTAL\*\*\s*\|\s*\*\*(\d+)\*\*\s*\|\s*\*\*135\*\*/i,
+        /TOTAL[^|]*\|\s*(\d+)\s*\|\s*135/i,
+        /\|\s*\*\*(\d+)\*\*\s*\|\s*\*\*135\*\*/i,
+        /Score[^0-9]*(\d+)\s*\/\s*135/i,
+        /Scaled Score[^:*\n]*:?\*?\s*(\d+)\s*\/\s*100/i,
+        /Score[^0-9]*(\d+)\s*\/\s*100/i,
       ];
+      const maxScore = isCars ? 100 : 135;
       for (const re of scorePatterns) {
         const sm = gradeText.match(re);
         if (sm) {
           ps = parseInt(sm[1], 10);
-          if (ps >= 0 && ps <= 100) break;
+          if (ps >= 0 && ps <= maxScore) break;
         }
       }
       if (ps !== null) setScore(ps);
 
       let pr = null;
-      const rm = gradeText.match(/Overall (?:Assessment|Rating)[^|]*\|[^|]*\|\s*([^\n|]+)/i);
+      const rm = gradeText.match(/Overall (?:Assessment|Rating)[^|]*\|[^|]*\|\s*([^\n|]+)/i) || gradeText.match(/Overall Assessment:\*?\*?\s*([^\n]+)/i);
       if (rm) {
         const r = rm[1].trim().replace(/\*/g, "");
-        pr = r.includes("Exceeds") ? "Exceeds Expectations" : r.includes("Meets") ? "Meets Expectations" : r.includes("Minor") ? "Needs Minor Calibration" : "Needs Remediation";
+        if (isCars) {
+          pr = r.includes("Exceeds") ? "Exceeds Expectations" : r.includes("Meets") ? "Meets Expectations" : r.includes("Minor") ? "Needs Minor Calibration" : "Needs Remediation";
+        } else {
+          pr = r.includes("Excellent") ? "Excellent" : r.includes("Satisfactory") ? "Satisfactory" : r.includes("Needs Improvement") || r.includes("Improvement") ? "Needs Improvement" : "Unsatisfactory";
+        }
         setRating(pr);
       }
 
       const emailText = await callClaude(EMAIL_PROMPT,
-        `STUDENT: ${form.studentName||"Not provided"}\nTUTOR: ${form.tutorName||"Not provided"}\nTUTOR EMAIL: ${form.tutorEmail||"Not provided"}\nSESSION: ${form.sessionNumber}\nDATE: ${form.sessionDate}\nSCORE: ${ps}/100\nRATING: ${pr}\n\nGRADING REPORT:\n${gradeText}`
+        `STUDENT: ${form.studentName||"Not provided"}\nTUTOR: ${form.tutorName||"Not provided"}\nTUTOR EMAIL: ${form.tutorEmail||"Not provided"}\nSESSION: ${form.sessionNumber}\nDATE: ${form.sessionDate}\nSCORE: ${ps}/${maxScore}\nRATING: ${pr}\n\nGRADING REPORT:\n${gradeText}`
       );
       let parsed = null;
       try {
@@ -973,7 +1104,7 @@ ${tutorEmailBody ? `
           {report && (
             <div ref={reportRef} style={{ marginTop: 24, animation: "fadeUp 0.4s ease" }}>
               <div style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: "18px 22px", marginBottom: 10, display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-                {score !== null && <ScoreRing score={score} />}
+                {score !== null && <ScoreRing score={score} maxScore={form.courseType === "cars" ? 100 : 135} />}
                 <div style={{ flex: 1, minWidth: 180 }}>
                   <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#5E6573", marginBottom: 6 }}>Grading complete</p>
                   <div style={{ marginBottom: 7 }}>{rating && <RatingBadge rating={rating} />}</div>
@@ -997,7 +1128,10 @@ ${tutorEmailBody ? `
               {/* Score bands */}
               <div style={{ background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: 10, padding: "11px 16px", marginBottom: 10, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
                 <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#5E6573" }}>Score bands</span>
-                {[["90–100","#16a34a","#f0fdf4","#bbf7d0","Exceeds"],["75–89","#2563eb","#eff6ff","#bfdbfe","Meets"],["60–74","#d97706","#fffbeb","#fde68a","Coach"],["<60","#dc2626","#fef2f2","#fecaca","Remediate"]].map(([range,c,bg,b,l])=>(
+                {(form.courseType === "cars"
+                  ? [["90–100","#16a34a","#f0fdf4","#bbf7d0","Exceeds"],["75–89","#2563eb","#eff6ff","#bfdbfe","Meets"],["60–74","#d97706","#fffbeb","#fde68a","Coach"],["<60","#dc2626","#fef2f2","#fecaca","Remediate"]]
+                  : [["120–135","#16a34a","#f0fdf4","#bbf7d0","Excellent"],["100–119","#2563eb","#eff6ff","#bfdbfe","Satisfactory"],["80–99","#d97706","#fffbeb","#fde68a","Needs Improvement"],["<80","#dc2626","#fef2f2","#fecaca","Unsatisfactory"]]
+                ).map(([range,c,bg,b,l])=>(
                   <span key={range} style={{padding:"3px 10px",borderRadius:8,background:bg,border:`1px solid ${b}`,fontSize:11,color:c,fontWeight:600}}><strong>{range}</strong> — {l}</span>
                 ))}
               </div>
