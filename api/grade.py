@@ -28,7 +28,7 @@ DIRECTOR_EMAILS = [
 
 
 class SessionGrader:
-    """Grader for Session 1 tutoring notes."""
+    """Grader for Session 1 tutoring notes using 4-category 135-point rubric."""
 
     def __init__(self, transcript, student_name, tutor_name, session_date, student_notes='',
                  sop_study_schedule='no', sop_question_packs='no', sop_full_length_exams='no'):
@@ -44,11 +44,11 @@ class SessionGrader:
         self.scores = {}
         self.justifications = {}
         self.missing_items = {}
-    
+
     def extract_info(self):
         """Extract key information from transcript."""
         text = self.transcript.lower()
-        
+
         # Test date
         test_date = 'Not found'
         date_patterns = [
@@ -62,7 +62,7 @@ class SessionGrader:
             if match:
                 test_date = match.group(0).title() if match.lastindex is None else match.group(1).title()
                 break
-        
+
         # Baseline score
         baseline = 'Not found'
         score_patterns = [r'(\d{3})\s*(?:on|diagnostic|baseline)', r'scored?\s*(?:a|an)?\s*(\d{3})', r'(\d{3})\s*(?:fl|full.?length)']
@@ -71,13 +71,13 @@ class SessionGrader:
             if match:
                 baseline = match.group(1)
                 break
-        
+
         # Target score
         target = 'Not found'
         target_match = re.search(r'(?:target|goal|need|want)\s*(?:a|an|is|of)?\s*(\d{3})', text)
         if target_match:
             target = target_match.group(1)
-        
+
         info = {
             'test_date': test_date,
             'baseline_score': baseline,
@@ -95,7 +95,7 @@ class SessionGrader:
             'transcript_length': len(self.transcript)
         }
         return info
-    
+
     def _extract_topics(self):
         """Extract science topics discussed."""
         topics = []
@@ -113,7 +113,7 @@ class SessionGrader:
             if any(kw in text for kw in keywords):
                 topics.append(topic)
         return topics
-    
+
     def _is_march5_placeholder(self, date_str):
         """Check if a date string is the March 5th default/placeholder date.
 
@@ -174,252 +174,552 @@ class SessionGrader:
         return any(re.search(p, notes_lower) for p in confirmation_patterns)
 
     def check_notes_present(self):
-        """Check what SOP items are in the notes."""
-        text = self.transcript.lower()
+        """Check what rubric items are present in the notes/transcript.
 
-        # AAMC dual-source rule: check both transcript AND student notes document
+        Returns a dict keyed by the new rubric score keys with status and evidence.
+        """
+        text = self.transcript.lower()
+        notes_lower = (self.student_notes or '').lower()
+        combined = text + ' ' + notes_lower
+
+        # AAMC dual-source rule
         student_doc_confirms_aamc = self._check_student_notes_aamc()
 
-        checks = {
-            'fl_exam_schedule': {'status': 'No', 'evidence': '(Not documented)'},
-            'aamc_question_packs': {'status': 'No', 'evidence': '(Not documented)'},
-            'below_avg_topics': {'status': 'No', 'evidence': '(Not documented)'},
-            'weekly_checklist': {'status': 'No', 'evidence': '(Not documented)'},
-            'daily_tasks': {'status': 'No', 'evidence': '(Not documented)'},
-            'strategy_notes': {'status': 'No', 'evidence': '(Not documented)'},
-            'next_session': {'status': 'No', 'evidence': '(Not documented)'},
-            'google_doc_shared': {'status': 'No', 'evidence': '(Not documented)'},
-            'baseline_documented': {'status': 'No', 'evidence': '(Not documented)'}
+        # March 5 placeholder detection for FL exams
+        total_dates, march5_count = self._count_march5_exams(combined)
+
+        checks = {}
+
+        # --- A1: Session Structure & Timing (10 pts) ---
+        has_intro = any(w in text for w in ['introduce', 'introduction', 'welcome', 'nice to meet', 'how are you'])
+        has_agenda = any(w in text for w in ['agenda', 'today we', 'plan for today', 'going to cover', 'outline'])
+        has_timing = any(w in text for w in ['minutes', 'hour', 'time', 'clock', 'wrap up', 'end of session'])
+        checks['a1_structure'] = {
+            'status': 'Yes' if (has_intro and has_agenda) else ('Partial' if (has_intro or has_agenda) else 'No'),
+            'evidence': 'Session structure with intro and agenda detected' if (has_intro and has_agenda)
+                        else 'Partial session structure detected' if (has_intro or has_agenda)
+                        else '(Not documented)',
+            'max_pts': 10
         }
 
-        # Full-Length Exam schedule detection (JW FL, AAMC exams, full length, practice exam)
-        # Check for March 5th placeholder dates in exam schedule
-        combined_for_dates = text + ' ' + (self.student_notes or '').lower()
-        total_dates, march5_count = self._count_march5_exams(combined_for_dates)
+        # --- A2: Study Schedule & Exam Planning (14 pts total) ---
+        # A2 base: study schedule (via SOP verification or transcript)
+        schedule_confirmed = self.sop_study_schedule == 'yes'
+        schedule_partial = self.sop_study_schedule == 'partial'
+        has_schedule_ref = any(w in text for w in ['study schedule', 'study plan', 'weekly schedule', 'daily schedule'])
+        checks['a2_schedule'] = {
+            'status': 'Yes' if (schedule_confirmed or has_schedule_ref) else ('Partial' if schedule_partial else 'No'),
+            'evidence': 'Study schedule confirmed via SOP verification (YES)' if schedule_confirmed
+                        else 'Study schedule referenced in transcript' if has_schedule_ref
+                        else 'Study schedule partially confirmed via SOP verification (PARTIAL)' if schedule_partial
+                        else '(Not documented)',
+            'max_pts': 4
+        }
 
+        # A2 FL exams (proportional scoring)
         fl_keywords = ['full length', 'full-length', 'jw fl', 'jack westin fl', 'practice exam', 'aamc fl']
         has_fl_ref = ('fl' in text and any(w in text for w in ['schedule', 'week', 'saturday', 'date'])) or any(kw in text for kw in fl_keywords)
-        if has_fl_ref:
-            if march5_count > 0 and total_dates > 0 and march5_count >= total_dates * 0.7:
-                # Most/all exam dates are the March 5th placeholder — not actually scheduled
-                checks['fl_exam_schedule'] = {'status': 'No', 'evidence': 'Exam dates use default March 5th placeholder — not actually scheduled by tutor'}
-            elif march5_count > 0 and total_dates > march5_count:
-                checks['fl_exam_schedule'] = {'status': 'Partial', 'evidence': 'Some exams scheduled but {} of {} dates are the March 5th default placeholder'.format(march5_count, total_dates)}
-            else:
-                checks['fl_exam_schedule'] = {'status': 'Partial', 'evidence': 'FL exam scheduling discussed'}
+        fl_confirmed_sop = self.sop_full_length_exams == 'yes'
+        fl_partial_sop = self.sop_full_length_exams == 'partial'
 
-        # AAMC Question Packs/Resources detection (separate from exams)
-        # Dual-source rule: student notes document is equally valid evidence
+        if fl_confirmed_sop:
+            checks['a2_fl_exams'] = {'status': 'Yes', 'evidence': 'FL exams confirmed via SOP verification (YES)', 'max_pts': 6}
+        elif has_fl_ref:
+            if march5_count > 0 and total_dates > 0 and march5_count >= total_dates * 0.7:
+                checks['a2_fl_exams'] = {'status': 'No', 'evidence': 'Exam dates use default March 5th placeholder — not actually scheduled', 'max_pts': 6}
+            elif march5_count > 0 and total_dates > march5_count:
+                checks['a2_fl_exams'] = {'status': 'Partial', 'evidence': 'Some exams scheduled but {} of {} dates are March 5th placeholder'.format(march5_count, total_dates), 'max_pts': 6}
+            else:
+                checks['a2_fl_exams'] = {'status': 'Partial', 'evidence': 'FL exam scheduling discussed but dates not fully documented', 'max_pts': 6}
+        elif fl_partial_sop:
+            checks['a2_fl_exams'] = {'status': 'Partial', 'evidence': 'FL exams partially confirmed via SOP verification (PARTIAL)', 'max_pts': 6}
+        else:
+            checks['a2_fl_exams'] = {'status': 'No', 'evidence': '(Not documented)', 'max_pts': 6}
+
+        # A2 AAMC question packs (binary)
         qpack_keywords = ['question pack', 'q-pack', 'qpack', 'section bank', 'flashcard', 'official prep', 'diagnostic tool']
         has_no_aamc = 'no aamc' in text or "doesn't have aamc" in text or 'does not have aamc' in text or "don't have aamc" in text
+        aamc_confirmed_sop = self.sop_question_packs == 'yes'
+        aamc_partial_sop = self.sop_question_packs == 'partial'
+
         if has_no_aamc:
-            checks['aamc_question_packs'] = {'status': 'Yes', 'evidence': 'Student has no AAMC question packs — full credit'}
+            checks['a2_aamc'] = {'status': 'Yes', 'evidence': 'Student has no AAMC question packs — full credit', 'max_pts': 4}
         elif student_doc_confirms_aamc:
-            checks['aamc_question_packs'] = {'status': 'Yes', 'evidence': 'Student notes document confirms AAMC materials assigned/scheduled'}
+            checks['a2_aamc'] = {'status': 'Yes', 'evidence': 'Student notes document confirms AAMC materials assigned/scheduled', 'max_pts': 4}
+        elif aamc_confirmed_sop:
+            checks['a2_aamc'] = {'status': 'Yes', 'evidence': 'AAMC packs confirmed via SOP verification (YES)', 'max_pts': 4}
         elif any(kw in text for kw in qpack_keywords):
-            checks['aamc_question_packs'] = {'status': 'Partial', 'evidence': 'AAMC question packs/resources mentioned'}
+            checks['a2_aamc'] = {'status': 'Partial', 'evidence': 'AAMC question packs/resources mentioned', 'max_pts': 4}
         elif 'aamc' in text and not any(kw in text for kw in ['exam', 'full length', 'full-length']):
-            checks['aamc_question_packs'] = {'status': 'Partial', 'evidence': 'AAMC materials referenced (likely question packs)'}
-        if any(w in text for w in ['weak', 'below', 'struggle', 'hard']):
-            checks['below_avg_topics'] = {'status': 'Partial', 'evidence': 'Weak areas discussed'}
-        if 'daily' in text or 'week 1' in text:
-            checks['daily_tasks'] = {'status': 'Partial', 'evidence': 'Some daily tasks mentioned'}
-        if any(w in text for w in ['strategy', 'approach', 'technique']):
-            checks['strategy_notes'] = {'status': 'Partial', 'evidence': 'Strategy concepts taught'}
-        if 'next' in text and ('session' in text or 'week' in text):
-            checks['next_session'] = {'status': 'Partial', 'evidence': 'Next session timing discussed'}
-        
+            checks['a2_aamc'] = {'status': 'Partial', 'evidence': 'AAMC materials referenced (likely question packs)', 'max_pts': 4}
+        elif aamc_partial_sop:
+            checks['a2_aamc'] = {'status': 'Partial', 'evidence': 'AAMC packs partially confirmed via SOP verification (PARTIAL)', 'max_pts': 4}
+        else:
+            checks['a2_aamc'] = {'status': 'No', 'evidence': '(Not documented)', 'max_pts': 4}
+
+        # --- A3: Pre/Post-Session Tasks (12 pts) ---
+        has_presession = any(w in text for w in ['before session', 'pre-session', 'prepared', 'reviewed before', 'looked at'])
+        checks['a3_presession'] = {
+            'status': 'Yes' if has_presession else 'No',
+            'evidence': 'Pre-session preparation referenced' if has_presession else '(Not documented)',
+            'max_pts': 3
+        }
+
+        has_survey = any(w in text for w in ['survey', 'questionnaire', 'intake form', 'feedback form', 'pre-session form'])
+        checks['a3_survey'] = {
+            'status': 'Yes' if has_survey else 'No',
+            'evidence': 'Survey/intake form referenced' if has_survey else '(Not documented)',
+            'max_pts': 3
+        }
+
+        has_postsession = any(w in text for w in ['notes', 'document', 'write up', 'summary', 'session notes', 'recap'])
+        checks['a3_postsession_notes'] = {
+            'status': 'Yes' if has_postsession else 'No',
+            'evidence': 'Post-session notes/documentation referenced' if has_postsession else '(Not documented)',
+            'max_pts': 3
+        }
+
+        has_shared = any(w in text for w in ['shared', 'share with', 'sent to', 'emailed', 'google doc'])
+        checks['a3_shared'] = {
+            'status': 'Yes' if has_shared else 'No',
+            'evidence': 'Document sharing referenced' if has_shared else '(Not documented)',
+            'max_pts': 3
+        }
+
+        # --- A4: Session-Specific Requirements (14 pts) ---
+        has_baseline = any(w in text for w in ['baseline', 'diagnostic', 'starting score', 'initial score'])
+        has_test_date = any(w in text for w in ['test date', 'exam date', 'mcat date', 'testing date'])
+        has_weak_areas = any(w in text for w in ['weak', 'below', 'struggle', 'hard', 'difficult', 'improve'])
+        has_commitments = any(w in text for w in ['class', 'school', 'work', 'job', 'schedule', 'busy', 'commitment'])
+        has_next_session_plan = any(w in text for w in ['next session', 'next week', 'follow up', 'follow-up'])
+        session_specific_count = sum([has_baseline, has_test_date, has_weak_areas, has_commitments, has_next_session_plan])
+        checks['a4_specific'] = {
+            'status': 'Yes' if session_specific_count >= 4 else ('Partial' if session_specific_count >= 2 else 'No'),
+            'evidence': 'Session-specific requirements addressed ({}/5 items found)'.format(session_specific_count) if session_specific_count > 0
+                        else '(Not documented)',
+            'max_pts': 14
+        }
+
+        # --- B1: Socratic Method (15 pts) ---
+        probing_keywords = ['what do you think', 'why do you think', 'how would you', 'can you explain', 'what happens if', 'tell me', 'walk me through']
+        probing_count = sum(1 for kw in probing_keywords if kw in text)
+        checks['b1_probing'] = {
+            'status': 'Yes' if probing_count >= 3 else ('Partial' if probing_count >= 1 else 'No'),
+            'evidence': '{} probing question patterns detected'.format(probing_count) if probing_count > 0 else '(Not documented)',
+            'max_pts': 5
+        }
+
+        student_talk_keywords = ['student:', 'student says', 'i think', 'my answer', 'i would say', 'because i']
+        student_talk_count = sum(1 for kw in student_talk_keywords if kw in text)
+        checks['b1_student_talks'] = {
+            'status': 'Yes' if student_talk_count >= 3 else ('Partial' if student_talk_count >= 1 else 'No'),
+            'evidence': '{} student-talk indicators detected'.format(student_talk_count) if student_talk_count > 0 else '(Not documented)',
+            'max_pts': 5
+        }
+
+        remap_keywords = ['let me just tell you', 'the answer is', 'you should memorize', 'just remember that']
+        has_remap = any(kw in text for kw in remap_keywords)
+        checks['b1_no_remap'] = {
+            'status': 'No' if has_remap else 'Yes',
+            'evidence': 'Direct answer-giving detected (should use Socratic method)' if has_remap else 'No direct answer-giving detected',
+            'max_pts': 5
+        }
+
+        # --- B2: Weakness Identification (15 pts) ---
+        reason_keywords = ['because', 'the reason', 'root cause', 'underlying', 'fundamental issue', 'core problem']
+        reason_count = sum(1 for kw in reason_keywords if kw in text)
+        checks['b2_identifies_reasons'] = {
+            'status': 'Yes' if reason_count >= 2 else ('Partial' if reason_count >= 1 else 'No'),
+            'evidence': '{} reasoning/root-cause indicators detected'.format(reason_count) if reason_count > 0 else '(Not documented)',
+            'max_pts': 5
+        }
+
+        excuse_keywords = ['it\'s okay', "don't worry about it", 'that\'s fine', 'no big deal', 'everyone struggles']
+        has_excuses = any(kw in text for kw in excuse_keywords)
+        checks['b2_no_excuses'] = {
+            'status': 'No' if has_excuses else 'Yes',
+            'evidence': 'Excuse-making language detected' if has_excuses else 'No excuse-making language detected',
+            'max_pts': 5
+        }
+
+        action_keywords = ['practice', 'drill', 'review', 'focus on', 'work on', 'try doing', 'assignment', 'homework', 'task']
+        action_count = sum(1 for kw in action_keywords if kw in text)
+        checks['b2_actionable'] = {
+            'status': 'Yes' if action_count >= 3 else ('Partial' if action_count >= 1 else 'No'),
+            'evidence': '{} actionable recommendation indicators detected'.format(action_count) if action_count > 0 else '(Not documented)',
+            'max_pts': 5
+        }
+
+        # --- B3: Passage Practice (10 pts) ---
+        passage_q_keywords = ['passage', 'question 1', 'question 2', 'question 3', 'first question', 'second question', 'third question', 'next question']
+        passage_q_count = sum(1 for kw in passage_q_keywords if kw in text)
+        checks['b3_three_qs'] = {
+            'status': 'Yes' if passage_q_count >= 3 else ('Partial' if passage_q_count >= 1 else 'No'),
+            'evidence': '{} passage/question references detected'.format(passage_q_count) if passage_q_count > 0 else '(Not documented)',
+            'max_pts': 4
+        }
+
+        teach_keywords = ['explain to me', 'teach it back', 'in your own words', 'walk me through', 'how would you explain']
+        teach_count = sum(1 for kw in teach_keywords if kw in text)
+        checks['b3_student_teaches'] = {
+            'status': 'Yes' if teach_count >= 1 else 'No',
+            'evidence': '{} teach-back indicators detected'.format(teach_count) if teach_count > 0 else '(Not documented)',
+            'max_pts': 3
+        }
+
+        feedback_keywords = ['paragraph', 'feedback', 'here is what', 'your approach', 'you did well', 'next time try']
+        feedback_count = sum(1 for kw in feedback_keywords if kw in text)
+        checks['b3_paragraph_feedback'] = {
+            'status': 'Yes' if feedback_count >= 2 else ('Partial' if feedback_count >= 1 else 'No'),
+            'evidence': '{} feedback indicators detected'.format(feedback_count) if feedback_count > 0 else '(Not documented)',
+            'max_pts': 3
+        }
+
+        # --- B4: Student Engagement (10 pts) ---
+        takeaway_keywords = ['takeaway', 'take away', 'key point', 'remember that', 'main lesson', 'biggest thing']
+        takeaway_count = sum(1 for kw in takeaway_keywords if kw in text)
+        checks['b4_takeaways'] = {
+            'status': 'Yes' if takeaway_count >= 1 else 'No',
+            'evidence': '{} takeaway indicators detected'.format(takeaway_count) if takeaway_count > 0 else '(Not documented)',
+            'max_pts': 4
+        }
+
+        question_keywords = ['any questions', 'do you have questions', 'does that make sense', 'anything unclear', 'want to ask']
+        question_count = sum(1 for kw in question_keywords if kw in text)
+        checks['b4_questions'] = {
+            'status': 'Yes' if question_count >= 2 else ('Partial' if question_count >= 1 else 'No'),
+            'evidence': '{} question-check indicators detected'.format(question_count) if question_count > 0 else '(Not documented)',
+            'max_pts': 3
+        }
+
+        timing_keywords = ['on time', 'started on time', 'minutes left', 'running over', 'wrap up']
+        timing_count = sum(1 for kw in timing_keywords if kw in text)
+        checks['b4_timing_accuracy'] = {
+            'status': 'Yes' if timing_count >= 1 else 'No',
+            'evidence': '{} timing/punctuality indicators detected'.format(timing_count) if timing_count > 0 else '(Not documented)',
+            'max_pts': 3
+        }
+
+        # --- C: Notes & Documentation (20 pts, 6 binary items) ---
+        has_template_named = bool(re.search(r'session\s*1?\s*notes|notes?\s*v2|student\s+notes', notes_lower)) or bool(re.search(r'session\s*1?\s*notes|notes?\s*v2', text))
+        checks['c_template_named'] = {
+            'status': 'Yes' if has_template_named else 'No',
+            'evidence': 'Named session notes template detected' if has_template_named else '(Not documented)',
+            'max_pts': 3
+        }
+
+        has_overview = any(w in notes_lower for w in ['overview', 'snapshot', 'student info', 'student profile', 'baseline'])
+        checks['c_overview_tab'] = {
+            'status': 'Yes' if has_overview else 'No',
+            'evidence': 'Overview/snapshot section detected in notes' if has_overview else '(Not documented)',
+            'max_pts': 3
+        }
+
+        has_detailed_notes = len(notes_lower) > 200 and any(w in notes_lower for w in ['session', 'discussed', 'covered', 'topic', 'strategy', 'review'])
+        checks['c_session_notes_detailed'] = {
+            'status': 'Yes' if has_detailed_notes else 'No',
+            'evidence': 'Detailed session notes detected ({} chars)'.format(len(notes_lower)) if has_detailed_notes else '(Not documented)',
+            'max_pts': 5
+        }
+
+        has_exam_progress = any(w in notes_lower for w in ['fl', 'full length', 'full-length', 'exam progress', 'score track', 'practice test'])
+        checks['c_exam_progress'] = {
+            'status': 'Yes' if has_exam_progress else 'No',
+            'evidence': 'Exam progress tracking detected in notes' if has_exam_progress else '(Not documented)',
+            'max_pts': 3
+        }
+
+        has_next_steps = any(w in notes_lower for w in ['next step', 'next session', 'action item', 'homework', 'assignment', 'to do', 'todo', 'follow up', 'follow-up'])
+        checks['c_next_steps_written'] = {
+            'status': 'Yes' if has_next_steps else 'No',
+            'evidence': 'Next steps/action items detected in notes' if has_next_steps else '(Not documented)',
+            'max_pts': 3
+        }
+
+        has_activity = any(w in notes_lower for w in ['activity', 'tracking', 'log', 'daily task', 'weekly', 'checklist'])
+        checks['c_activity_tracking'] = {
+            'status': 'Yes' if has_activity else 'No',
+            'evidence': 'Activity tracking detected in notes' if has_activity else '(Not documented)',
+            'max_pts': 3
+        }
+
+        # --- D: Professionalism (15 pts, 5 binary items) ---
+        has_good_demeanor = not any(w in text for w in ['rude', 'frustrated', 'annoyed', 'impatient', 'condescending'])
+        checks['d_demeanor'] = {
+            'status': 'Yes' if has_good_demeanor else 'No',
+            'evidence': 'Professional demeanor maintained' if has_good_demeanor else 'Unprofessional language detected',
+            'max_pts': 3
+        }
+
+        guarantee_keywords = ['guarantee', 'i promise you', 'you will definitely', 'for sure you will', '100% you will']
+        has_guarantees = any(kw in text for kw in guarantee_keywords)
+        checks['d_no_guarantees'] = {
+            'status': 'No' if has_guarantees else 'Yes',
+            'evidence': 'Score guarantees detected' if has_guarantees else 'No score guarantees made',
+            'max_pts': 3
+        }
+
+        improper_channels = ['personal email', 'text me', 'call me on my cell', 'my personal number', 'instagram', 'snapchat']
+        has_improper = any(kw in text for kw in improper_channels)
+        checks['d_proper_channels'] = {
+            'status': 'No' if has_improper else 'Yes',
+            'evidence': 'Improper communication channels suggested' if has_improper else 'Proper communication channels used',
+            'max_pts': 3
+        }
+
+        # On-time: default to Yes unless explicitly late
+        late_keywords = ['sorry i\'m late', 'running late', 'apologize for the delay', 'started late']
+        was_late = any(kw in text for kw in late_keywords)
+        checks['d_on_time'] = {
+            'status': 'No' if was_late else 'Yes',
+            'evidence': 'Late start detected' if was_late else 'No late start detected',
+            'max_pts': 3
+        }
+
+        unapproved_platforms = ['discord', 'whatsapp', 'telegram', 'facebook messenger', 'skype']
+        has_unapproved = any(kw in text for kw in unapproved_platforms)
+        checks['d_approved_platforms'] = {
+            'status': 'No' if has_unapproved else 'Yes',
+            'evidence': 'Unapproved platform referenced' if has_unapproved else 'Approved platforms used',
+            'max_pts': 3
+        }
+
         return checks
-    
+
     def grade(self):
-        """Perform grading and return findings."""
+        """Perform grading using the 4-category 135-point rubric."""
         info = self.extract_info()
         notes_check = self.check_notes_present()
-        
-        # Preparation score
-        prep_score = 5
-        prep_just = []
-        prep_missing = []
-        if info['test_date'] != 'Not found':
-            prep_score += 1
-            prep_just.append("Test date was discussed")
+
+        # --- Score each item ---
+
+        # A1: Session Structure & Timing (10 pts) — binary
+        if notes_check['a1_structure']['status'] == 'Yes':
+            self.scores['a1_structure'] = 10
+        elif notes_check['a1_structure']['status'] == 'Partial':
+            self.scores['a1_structure'] = 5
         else:
-            prep_missing.append("Test date not confirmed")
-        if info['baseline_score'] != 'Not found':
-            prep_score += 1
-            prep_just.append("baseline score reviewed")
+            self.scores['a1_structure'] = 0
+
+        # A2: Study Schedule (4 pts) — binary
+        if notes_check['a2_schedule']['status'] == 'Yes':
+            self.scores['a2_schedule'] = 4
+        elif notes_check['a2_schedule']['status'] == 'Partial':
+            self.scores['a2_schedule'] = 2
         else:
-            prep_missing.append("Baseline score not documented")
-        if info['weak_chem'] or info['weak_bio']:
-            prep_score += 1
-            prep_just.append("weak areas identified")
+            self.scores['a2_schedule'] = 0
+
+        # A2: FL Exams (6 pts) — proportional: SOP verification overrides "No"
+        fl_status = notes_check['a2_fl_exams']['status']
+        if fl_status == 'Yes':
+            self.scores['a2_fl_exams'] = 6
+        elif fl_status == 'Partial':
+            # Proportional: if some exams scheduled vs placeholder
+            combined = self.transcript.lower() + ' ' + (self.student_notes or '').lower()
+            total_dates, march5_count = self._count_march5_exams(combined)
+            if total_dates > 0 and total_dates > march5_count:
+                scheduled_ratio = (total_dates - march5_count) / max(total_dates, 1)
+                self.scores['a2_fl_exams'] = max(1, round(6 * scheduled_ratio))
+            else:
+                self.scores['a2_fl_exams'] = 3  # generic partial
         else:
-            prep_missing.append("Below-average topics not identified")
-        
-        self.scores['Preparation'] = min(prep_score, 10)
-        self.justifications['Preparation'] = ' '.join(prep_just) + ". However, no documentation of preparation exists in the notes." if prep_just else "Limited evidence of preparation in documentation."
-        self.missing_items['Preparation'] = prep_missing if prep_missing else ["Documentation of baseline review", "Prioritized topic list"]
-        
-        # Study Plan score — incorporates SOP verification inputs as third source of truth
-        plan_score = 3
-        plan_just = []
-        plan_missing = []
-        # Full-length exams: check notes/transcript OR SOP verification
-        fl_confirmed = notes_check['fl_exam_schedule']['status'] != 'No'
-        if not fl_confirmed and self.sop_full_length_exams == 'yes':
-            fl_confirmed = True
-            plan_just.append("Full-length exams confirmed via SOP verification (YES)")
-        elif not fl_confirmed and self.sop_full_length_exams == 'partial':
-            plan_score += 1  # 50% credit
-            plan_just.append("Full-length exams partially confirmed via SOP verification (PARTIAL)")
-        if fl_confirmed:
-            plan_score += 2
-            if "Full-length exams confirmed via SOP verification" not in ' '.join(plan_just):
-                plan_just.append("Some FL exam scheduling discussed")
+            self.scores['a2_fl_exams'] = 0
+
+        # A2: AAMC (4 pts) — binary
+        if notes_check['a2_aamc']['status'] == 'Yes':
+            self.scores['a2_aamc'] = 4
+        elif notes_check['a2_aamc']['status'] == 'Partial':
+            self.scores['a2_aamc'] = 2
         else:
-            plan_missing.append("Full-length exam schedule with dates (10 exams: JW FL 1-6 + AAMC exams)")
-        # AAMC question packs: check notes/transcript OR SOP verification
-        aamc_confirmed = notes_check['aamc_question_packs']['status'] != 'No'
-        if not aamc_confirmed and self.sop_question_packs == 'yes':
-            aamc_confirmed = True
-            plan_just.append("AAMC question packs confirmed via SOP verification (YES)")
-        elif not aamc_confirmed and self.sop_question_packs == 'partial':
-            plan_score += 1  # partial credit
-            plan_just.append("AAMC question packs partially confirmed via SOP verification (PARTIAL)")
-        if aamc_confirmed:
-            plan_score += 1
-            if "AAMC question packs confirmed via SOP verification" not in ' '.join(plan_just):
-                plan_just.append("AAMC question packs/resources referenced")
+            self.scores['a2_aamc'] = 0
+
+        # A3: Pre-session tasks (3 pts) — binary
+        self.scores['a3_presession'] = 3 if notes_check['a3_presession']['status'] == 'Yes' else 0
+
+        # A3: Survey (3 pts) — binary
+        self.scores['a3_survey'] = 3 if notes_check['a3_survey']['status'] == 'Yes' else 0
+
+        # A3: Post-session notes (3 pts) — binary
+        self.scores['a3_postsession_notes'] = 3 if notes_check['a3_postsession_notes']['status'] == 'Yes' else 0
+
+        # A3: Shared (3 pts) — binary
+        self.scores['a3_shared'] = 3 if notes_check['a3_shared']['status'] == 'Yes' else 0
+
+        # A4: Session-Specific Requirements (14 pts) — proportional based on items found
+        a4_status = notes_check['a4_specific']['status']
+        if a4_status == 'Yes':
+            self.scores['a4_specific'] = 14
+        elif a4_status == 'Partial':
+            self.scores['a4_specific'] = 7
         else:
-            plan_missing.append("AAMC question packs/resources scheduling (if student has them)")
-        # Study schedule: check SOP verification
-        if self.sop_study_schedule == 'yes':
-            plan_score += 1
-            plan_just.append("Study schedule confirmed via SOP verification (YES)")
-        elif self.sop_study_schedule == 'partial':
-            plan_just.append("Study schedule partially confirmed via SOP verification (PARTIAL)")
-        if notes_check['weekly_checklist']['status'] != 'No':
-            plan_score += 2
-        else:
-            plan_missing.append("Weekly checklist")
-        if notes_check['daily_tasks']['status'] != 'No':
-            plan_score += 1
-        else:
-            plan_missing.append("Daily tasks for Week 1")
-        
-        self.scores['Study Plan'] = min(plan_score, 10)
-        self.justifications['Study Plan'] = ' '.join(plan_just) + " However, notes contain minimal structured study plan documentation." if plan_just else "The notes contain minimal to no structured study plan. No weekly checklist, no AAMC question pack scheduling, and limited daily task assignments are documented."
-        self.missing_items['Study Plan'] = plan_missing if plan_missing else ["Structured exam schedule", "Weekly checklist", "Daily tasks"]
-        
-        # Personalization score
-        pers_score = 5
-        pers_just = []
-        pers_missing = []
-        if info['has_adhd']:
-            pers_score += 1
-            pers_just.append("ADHD accommodations acknowledged")
-        if info['has_classes']:
-            pers_score += 1
-            pers_just.append("school schedule considered")
-        if info['has_work']:
-            pers_score += 1
-        if not pers_just:
-            pers_just.append("Limited personalization evident in documentation")
-        pers_missing.append("Weekly study hour estimate")
-        pers_missing.append("Documented workload calibration")
-        
-        self.scores['Personalization'] = min(pers_score, 10)
-        self.justifications['Personalization'] = ' '.join(pers_just) + ". However, these factors were not translated into documented workload calibration."
-        self.missing_items['Personalization'] = pers_missing
-        
-        # Strategy score
-        strat_score = 5
-        strat_just = []
-        strat_missing = []
-        if info['has_strategy']:
-            strat_score += 2
-            strat_just.append("Strategy concepts were taught")
-        if len(info['topics_discussed']) >= 2:
-            strat_score += 2
-            strat_just.append("multiple topics covered ({})".format(', '.join(info['topics_discussed'][:3])))
-        if not strat_just:
-            strat_just.append("Limited strategy instruction documented")
-        strat_missing.append("Summary of strategy concepts taught")
-        strat_missing.append("Student-specific takeaways")
-        
-        self.scores['Strategy'] = min(strat_score, 10)
-        self.justifications['Strategy'] = ' '.join(strat_just) + "." if strat_just else "Strategy portion documentation is incomplete."
-        self.missing_items['Strategy'] = strat_missing
-        
-        # Clarity score
-        clarity_score = 4
-        clarity_just = []
-        clarity_missing = []
-        if info['has_next_session']:
-            clarity_score += 2
-            clarity_just.append("Next session timing discussed")
-        else:
-            clarity_missing.append("Confirmed next session date")
-        clarity_missing.append("Comprehensive next-steps summary")
-        clarity_missing.append("Full list of assignments")
-        
-        self.scores['Clarity'] = min(clarity_score, 10)
-        self.justifications['Clarity'] = ' '.join(clarity_just) + ". However, the session ended without a clear documented recap." if clarity_just else "Session concluded without comprehensive documented next steps."
-        self.missing_items['Clarity'] = clarity_missing
-        
-        # Calculate average
-        avg = sum(self.scores.values()) / len(self.scores)
-        
-        # Determine rating
-        if avg >= 8.5:
-            rating = 'Strong Session'
-        elif avg >= 7.0:
-            rating = 'Adequate'
-        elif avg >= 5.0:
+            self.scores['a4_specific'] = 0
+
+        # B1: Probing questions (5 pts) — binary
+        self.scores['b1_probing'] = 5 if notes_check['b1_probing']['status'] == 'Yes' else (2 if notes_check['b1_probing']['status'] == 'Partial' else 0)
+
+        # B1: Student talks (5 pts) — binary
+        self.scores['b1_student_talks'] = 5 if notes_check['b1_student_talks']['status'] == 'Yes' else (2 if notes_check['b1_student_talks']['status'] == 'Partial' else 0)
+
+        # B1: No remapping (5 pts) — binary (full if no bad behavior)
+        self.scores['b1_no_remap'] = 5 if notes_check['b1_no_remap']['status'] == 'Yes' else 0
+
+        # B2: Identifies reasons (5 pts)
+        self.scores['b2_identifies_reasons'] = 5 if notes_check['b2_identifies_reasons']['status'] == 'Yes' else (2 if notes_check['b2_identifies_reasons']['status'] == 'Partial' else 0)
+
+        # B2: No excuses (5 pts) — binary
+        self.scores['b2_no_excuses'] = 5 if notes_check['b2_no_excuses']['status'] == 'Yes' else 0
+
+        # B2: Actionable (5 pts)
+        self.scores['b2_actionable'] = 5 if notes_check['b2_actionable']['status'] == 'Yes' else (2 if notes_check['b2_actionable']['status'] == 'Partial' else 0)
+
+        # B3: Three questions (4 pts)
+        self.scores['b3_three_qs'] = 4 if notes_check['b3_three_qs']['status'] == 'Yes' else (2 if notes_check['b3_three_qs']['status'] == 'Partial' else 0)
+
+        # B3: Student teaches (3 pts) — binary
+        self.scores['b3_student_teaches'] = 3 if notes_check['b3_student_teaches']['status'] == 'Yes' else 0
+
+        # B3: Paragraph feedback (3 pts)
+        self.scores['b3_paragraph_feedback'] = 3 if notes_check['b3_paragraph_feedback']['status'] == 'Yes' else (1 if notes_check['b3_paragraph_feedback']['status'] == 'Partial' else 0)
+
+        # B4: Takeaways (4 pts) — binary
+        self.scores['b4_takeaways'] = 4 if notes_check['b4_takeaways']['status'] == 'Yes' else 0
+
+        # B4: Questions (3 pts)
+        self.scores['b4_questions'] = 3 if notes_check['b4_questions']['status'] == 'Yes' else (1 if notes_check['b4_questions']['status'] == 'Partial' else 0)
+
+        # B4: Timing accuracy (3 pts) — binary
+        self.scores['b4_timing_accuracy'] = 3 if notes_check['b4_timing_accuracy']['status'] == 'Yes' else 0
+
+        # C: Notes & Documentation (20 pts, 6 binary items)
+        self.scores['c_template_named'] = 3 if notes_check['c_template_named']['status'] == 'Yes' else 0
+        self.scores['c_overview_tab'] = 3 if notes_check['c_overview_tab']['status'] == 'Yes' else 0
+        self.scores['c_session_notes_detailed'] = 5 if notes_check['c_session_notes_detailed']['status'] == 'Yes' else 0
+        self.scores['c_exam_progress'] = 3 if notes_check['c_exam_progress']['status'] == 'Yes' else 0
+        self.scores['c_next_steps_written'] = 3 if notes_check['c_next_steps_written']['status'] == 'Yes' else 0
+        self.scores['c_activity_tracking'] = 3 if notes_check['c_activity_tracking']['status'] == 'Yes' else 0
+
+        # D: Professionalism (15 pts, 5 binary items)
+        self.scores['d_demeanor'] = 3 if notes_check['d_demeanor']['status'] == 'Yes' else 0
+        self.scores['d_no_guarantees'] = 3 if notes_check['d_no_guarantees']['status'] == 'Yes' else 0
+        self.scores['d_proper_channels'] = 3 if notes_check['d_proper_channels']['status'] == 'Yes' else 0
+        self.scores['d_on_time'] = 3 if notes_check['d_on_time']['status'] == 'Yes' else 0
+        self.scores['d_approved_platforms'] = 3 if notes_check['d_approved_platforms']['status'] == 'Yes' else 0
+
+        # --- Compute category totals ---
+        a_total = (self.scores['a1_structure'] + self.scores['a2_schedule'] +
+                   self.scores['a2_fl_exams'] + self.scores['a2_aamc'] +
+                   self.scores['a3_presession'] + self.scores['a3_survey'] +
+                   self.scores['a3_postsession_notes'] + self.scores['a3_shared'] +
+                   self.scores['a4_specific'])
+        b_total = (self.scores['b1_probing'] + self.scores['b1_student_talks'] +
+                   self.scores['b1_no_remap'] + self.scores['b2_identifies_reasons'] +
+                   self.scores['b2_no_excuses'] + self.scores['b2_actionable'] +
+                   self.scores['b3_three_qs'] + self.scores['b3_student_teaches'] +
+                   self.scores['b3_paragraph_feedback'] + self.scores['b4_takeaways'] +
+                   self.scores['b4_questions'] + self.scores['b4_timing_accuracy'])
+        c_total = (self.scores['c_template_named'] + self.scores['c_overview_tab'] +
+                   self.scores['c_session_notes_detailed'] + self.scores['c_exam_progress'] +
+                   self.scores['c_next_steps_written'] + self.scores['c_activity_tracking'])
+        d_total = (self.scores['d_demeanor'] + self.scores['d_no_guarantees'] +
+                   self.scores['d_proper_channels'] + self.scores['d_on_time'] +
+                   self.scores['d_approved_platforms'])
+
+        raw_total = a_total + b_total + c_total + d_total
+
+        # Determine rating using new scale
+        if raw_total >= 120:
+            rating = 'Excellent'
+        elif raw_total >= 100:
+            rating = 'Satisfactory'
+        elif raw_total >= 80:
             rating = 'Needs Improvement'
         else:
-            rating = 'Review Required'
-        
+            rating = 'Unsatisfactory'
+
+        # Build justifications per category
+        self.justifications['A'] = self._build_category_justification('A', notes_check)
+        self.justifications['B'] = self._build_category_justification('B', notes_check)
+        self.justifications['C'] = self._build_category_justification('C', notes_check)
+        self.justifications['D'] = self._build_category_justification('D', notes_check)
+
+        # Build missing items per category
+        self.missing_items['A'] = [k for k in notes_check if k.startswith('a') and notes_check[k]['status'] == 'No']
+        self.missing_items['B'] = [k for k in notes_check if k.startswith('b') and notes_check[k]['status'] == 'No']
+        self.missing_items['C'] = [k for k in notes_check if k.startswith('c') and notes_check[k]['status'] == 'No']
+        self.missing_items['D'] = [k for k in notes_check if k.startswith('d') and notes_check[k]['status'] == 'No']
+
         self.findings = {
             'info': info,
             'notes_check': notes_check,
             'scores': self.scores,
-            'average': round(avg, 1),
+            'a_total': a_total,
+            'b_total': b_total,
+            'c_total': c_total,
+            'd_total': d_total,
+            'raw_total': raw_total,
             'rating': rating
         }
         return self.findings
-    
+
+    def _build_category_justification(self, category_prefix, notes_check):
+        """Build a justification string for a category from check results."""
+        prefix = category_prefix.lower()
+        parts = []
+        for key, check in notes_check.items():
+            if key.startswith(prefix) and key.count('_') >= 1:
+                label = key.replace('_', ' ').upper()
+                if check['status'] == 'Yes':
+                    parts.append('{}: Pass'.format(label))
+                elif check['status'] == 'Partial':
+                    parts.append('{}: Partial — {}'.format(label, check['evidence']))
+                else:
+                    parts.append('{}: Missing — {}'.format(label, check['evidence']))
+        return '; '.join(parts) if parts else 'No items evaluated.'
+
     def _get_biggest_risk(self):
-        """Determine biggest risk based on scores."""
-        if self.scores.get('Study Plan', 10) <= 4:
-            return "No formal session notes exist - student has no take-home documentation with study plan, exam schedule, weekly checklist, or daily tasks."
-        elif self.scores.get('Clarity', 10) <= 4:
-            return "Student left session without clear next steps or confirmed follow-up date."
-        elif self.scores.get('Preparation', 10) <= 4:
-            return "Insufficient baseline assessment may lead to misaligned study recommendations."
+        """Determine biggest risk based on category totals."""
+        f = self.findings
+        if f['a_total'] < 25:
+            return "SOP compliance is critically low — session structure, scheduling, and documentation requirements were largely unmet."
+        elif f['c_total'] < 10:
+            return "Notes and documentation are severely lacking — student has no take-home reference material."
+        elif f['b_total'] < 25:
+            return "Coaching quality needs significant improvement — Socratic method, weakness identification, or passage practice were deficient."
+        elif f['d_total'] < 10:
+            return "Professionalism concerns detected — review communication channels and demeanor."
         else:
-            return "Documentation gaps may impact student's ability to follow study plan independently."
-    
+            return "Minor gaps in documentation or coaching may impact student's ability to follow study plan independently."
+
     def _get_top_fixes(self):
-        """Generate top 3 fixes based on lowest scores."""
+        """Generate top 3 fixes based on lowest-scoring areas."""
         fixes = []
-        if self.scores.get('Study Plan', 10) <= 5:
-            fixes.append("Create a proper Google Doc with student snapshot, study schedule, FL exam dates, AAMC question pack scheduling, and weekly/daily task breakdown")
-        if self.scores.get('Study Plan', 10) <= 6:
-            fixes.append("Document the FL exam schedule explicitly (10 FLs: JW FL 1-6 + AAMC exams, with dates for each)")
-        if self.missing_items.get('Preparation'):
-            fixes.append("Add below-average topic list with specific daily/weekly assignments for weak areas")
-        if self.scores.get('Clarity', 10) <= 5:
-            fixes.append("Confirm next session date and document clear action items with deadlines")
-        if self.scores.get('Strategy', 10) <= 6:
-            fixes.append("Document strategy concepts taught during session for student reference")
+        f = self.findings
+        if f['a_total'] < 30:
+            fixes.append("Ensure full SOP compliance: confirm session structure, create study schedule with FL exam dates, and complete all pre/post-session tasks")
+        if self.scores.get('a2_fl_exams', 0) == 0:
+            fixes.append("Document the FL exam schedule explicitly (10 FLs: JW FL 1-6 + AAMC exams, with specific dates for each)")
+        if self.scores.get('a2_aamc', 0) == 0:
+            fixes.append("Schedule AAMC question packs/resources (if student has them) with deadlines")
+        if f['c_total'] < 12:
+            fixes.append("Create proper session notes using the Notes v2 template with overview, detailed notes, exam progress, and next steps")
+        if f['b_total'] < 30:
+            fixes.append("Improve coaching quality: use more Socratic questioning, have student teach back concepts, and provide detailed passage feedback")
+        if self.scores.get('a3_shared', 0) == 0:
+            fixes.append("Share session documentation with student and director emails")
+        if f['d_total'] < 12:
+            fixes.append("Review professionalism standards: use approved platforms, maintain proper demeanor, avoid score guarantees")
         return fixes[:3]
-    
+
     def _generate_tutor_feedback(self):
         """Generate detailed tutor feedback."""
         info = self.findings['info']
-        
+        f = self.findings
+
         positives = []
+        if f['b_total'] >= 35:
+            positives.append(("Strong Coaching Quality", "Socratic method, weakness identification, and student engagement were well-executed. Score: {}/50.".format(f['b_total'])))
+        if f['d_total'] >= 12:
+            positives.append(("Professional Conduct", "Professionalism standards were met consistently. Score: {}/15.".format(f['d_total'])))
         if info['has_strategy'] and len(info['topics_discussed']) >= 2:
             positives.append(("Strong Content Instruction", "Multiple topics were covered with evident strategy discussion. This demonstrates good session utilization and content expertise."))
         if info['has_adhd'] or info['has_classes']:
@@ -430,49 +730,57 @@ class SessionGrader:
             positives.append(("Forward Planning", "Discussion of next session timing shows continuity planning."))
         if len(info['topics_discussed']) >= 3:
             positives.append(("Broad Topic Coverage", "You addressed multiple content areas: {}.".format(', '.join(info['topics_discussed'][:4]))))
-        
+
         if not positives:
             positives.append(("Session Conducted", "The tutoring session was completed."))
-        
+
         improvements = []
-        if self.scores['Study Plan'] <= 5:
+        if f['a_total'] < 25:
             improvements.append({
-                'title': 'Critical: No Session Documentation Created',
-                'what': 'The session produced minimal documented notes. No formal notes document exists with structured study plan.',
-                'why': 'Student has no reference document for their study plan, exam schedule, or strategies discussed. They cannot follow a structured plan independently.',
-                'fix': 'Create a Google Doc immediately using the Notes v2 template. Include: Student Snapshot, Exam Schedule, Weekly Checklist, Week 1 Daily Tasks, Strategy Summary. Share with student AND anastasia@jackwestin.com, michaelmel@jackwestin.com. Budget 10-15 minutes at session end for documentation.'
+                'title': 'Critical: SOP Compliance Deficient',
+                'what': 'Multiple SOP requirements were not met including session structure, scheduling, and pre/post-session tasks.',
+                'why': 'SOP compliance ensures consistent quality and that students receive all required planning and documentation.',
+                'fix': 'Review the SOP checklist before each session. Use a pre-session checklist to ensure all items are covered. Budget time at end for documentation.'
             })
-        
-        if self.scores['Study Plan'] <= 6 and self.scores['Study Plan'] > 5:
+
+        if f['c_total'] < 10:
             improvements.append({
-                'title': 'Missing: Structured Exam Schedule',
+                'title': 'Critical: Inadequate Session Documentation',
+                'what': 'The session produced minimal documented notes. Key sections are missing from the notes document.',
+                'why': 'Student has no reference document for their study plan, exam schedule, or strategies discussed. They cannot follow a structured plan independently.',
+                'fix': 'Create a Google Doc immediately using the Notes v2 template. Include: Student Snapshot, Exam Schedule, Session Notes, Next Steps. Share with student AND directors. Budget 10-15 minutes at session end for documentation.'
+            })
+
+        if f['b_total'] < 30:
+            improvements.append({
+                'title': 'Improve: Coaching Methodology',
+                'what': 'Coaching quality indicators suggest room for improvement in Socratic method usage, weakness identification, or passage practice.',
+                'why': 'Effective coaching drives better student outcomes. Students learn more when they explain concepts back and identify their own weaknesses.',
+                'fix': 'Ask more open-ended questions. Have the student teach back concepts. When reviewing passages, ask 3+ questions and have the student explain their reasoning.'
+            })
+
+        if self.scores.get('a2_fl_exams', 0) < 4:
+            improvements.append({
+                'title': 'Missing: FL Exam Schedule with Dates',
                 'what': 'FL sequencing may have been discussed verbally but specific dates were not documented.',
                 'why': 'Student needs clarity on which test to take each week. Without a documented schedule, they may sequence incorrectly.',
                 'fix': 'Create a table: Week | Date | Exam | Notes. Be explicit about when to start AAMC materials.'
             })
-        
-        if self.missing_items.get('Preparation') and len(self.missing_items['Preparation']) > 1:
+
+        if self.missing_items.get('A') and len(self.missing_items['A']) > 2:
             improvements.append({
-                'title': 'Missing: Below-Average Topic Prioritization',
-                'what': 'Weak areas may have been identified through discussion but no prioritized topic list was created in notes.',
-                'why': 'Student needs specific topics to focus on. Without this list, they may study inefficiently.',
-                'fix': 'Create a "Priority Topics" section organized by MCAT section. Exclude topics covered by live course. Rank by importance.'
+                'title': 'Missing: Session-Specific Requirements',
+                'what': 'Several session-specific items were not addressed (baseline, test date, weak areas, commitments, or next session plan).',
+                'why': 'These items form the foundation of a personalized study plan. Without them, recommendations may be generic.',
+                'fix': 'Use a Session 1 checklist to confirm: test date, baseline score, target score, constraints, weak areas, and next session date.'
             })
-        
-        if self.scores['Clarity'] <= 5:
-            improvements.append({
-                'title': 'Incomplete: Next Session Planning',
-                'what': 'No specific next session date was confirmed or documented.',
-                'why': 'Without a confirmed date, follow-up may slip. Session 1 momentum is critical.',
-                'fix': 'Always confirm a specific date before ending Session 1. Document it in notes with planned focus areas. Include "Student to bring: [items]".'
-            })
-        
+
         return positives, improvements
-    
+
     def _generate_gap_analysis(self):
         """Generate transcript vs notes gap analysis."""
         info = self.findings['info']
-        
+
         gap_items = [
             ('Test date: ' + info['test_date'], info['test_date'] != 'Not found', 'No'),
             ('Baseline score: ~' + info['baseline_score'], info['baseline_score'] != 'Not found', 'No'),
@@ -483,19 +791,19 @@ class SessionGrader:
             ('FL exam schedule (10 exams: JW FL + AAMC)', True, 'No'),
             ('AAMC question packs/resources scheduling', True, 'No'),
         ]
-        
+
         for topic in info['topics_discussed']:
             gap_items.append((topic + ' strategy', True, 'Partial'))
-        
+
         gap_items.append(('Next session timing', info['has_next_session'], 'No'))
-        
+
         return gap_items
-    
+
     def _generate_notes_v2_clean(self):
         """Generate recommended notes rewrite in clean format."""
         info = self.findings['info']
         session_dt = datetime.strptime(self.session_date, '%Y-%m-%d') if self.session_date else datetime.now()
-        
+
         exam_schedule = []
         for i in range(9):
             exam_date = session_dt + timedelta(days=(i+1)*7 - session_dt.weekday() + 5)
@@ -504,7 +812,7 @@ class SessionGrader:
             else:
                 exam_name = "AAMC FL {}".format(i-2)
             exam_schedule.append((i+1, exam_date.strftime('%b %d'), exam_name))
-        
+
         days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
         week1_tasks = [
             (days[0], "Session complete. Review foundational concepts from today's discussion"),
@@ -515,7 +823,7 @@ class SessionGrader:
             (days[5], "Full Length Practice Test - Simulate test conditions"),
             (days[6], "FL review with tracker. Identify top 3 new weak areas"),
         ]
-        
+
         notes_v2 = """SESSION 1 NOTES - {student}
 
 Tutor: {tutor}
@@ -565,10 +873,10 @@ Week | Date   | Exam              | Notes
             bio_topics='Enzyme kinetics, cellular processes' if info['weak_bio'] else '[IDENTIFY WEAK TOPICS]',
             strengths=('CARS' if info['strong_cars'] else '') + (', Psych/Soc' if info['strong_psych'] else '') or '[IDENTIFY STRENGTHS]'
         )
-        
+
         for week, date, exam in exam_schedule:
             notes_v2 += "{:<4} | {:<6} | {:<17} |\n".format(week, date, exam)
-        
+
         notes_v2 += """
 ________________________________________________________________________________
 
@@ -603,7 +911,7 @@ Day  | Task
 """
         for day, task in week1_tasks:
             notes_v2 += "{:<4} | {}\n".format(day, task)
-        
+
         notes_v2 += """
 ________________________________________________________________________________
 
@@ -612,10 +920,10 @@ Strategy Focus (From Today's Session)
 """
         for i, topic in enumerate(info['topics_discussed'], 1):
             notes_v2 += "{}. {}\n   - [Add key points from session discussion]\n   - [Add student-specific takeaways]\n\n".format(i, topic)
-        
+
         if not info['topics_discussed']:
             notes_v2 += "1. [Topic 1]\n   - [Add key points]\n\n2. [Topic 2]\n   - [Add key points]\n\n"
-        
+
         notes_v2 += """________________________________________________________________________________
 
 Next Session Plan
@@ -634,25 +942,32 @@ ________________________________________________________________________________
 
 Document shared with: anastasia@jackwestin.com, michaelmel@jackwestin.com
 """.format(tutor_email=self.tutor_name.lower().replace(' ', '') + '@jackwestin.com')
-        
+
         return notes_v2
-    
+
     def generate_report(self):
-        """Generate the full comprehensive grading report in clean format."""
+        """Generate the full comprehensive grading report using 4-category 135-point rubric."""
         if not self.findings:
             self.grade()
-        
+
         f = self.findings
         info = f['info']
         notes_check = f['notes_check']
-        
+
         positives, improvements = self._generate_tutor_feedback()
         gap_items = self._generate_gap_analysis()
         notes_v2 = self._generate_notes_v2_clean()
-        
+
         sep = "________________________________________________________________________________"
-        
-        report = """SESSION 1 GRADING REPORT
+
+        # Score label helper
+        def _score_line(key, label, max_pts):
+            pts = self.scores.get(key, 0)
+            status = notes_check.get(key, {}).get('status', '?')
+            evidence = notes_check.get(key, {}).get('evidence', '')
+            return "{:<45} | {:>3}/{:<3} | {:<8} | {}".format(label, pts, max_pts, status, evidence[:60])
+
+        report = """SESSION 1 GRADING REPORT (135-Point Rubric)
 
 Student: {student}
 Tutor: {tutor}
@@ -665,6 +980,7 @@ Graded By: JW Session Notes Grader (Agent)
 SECTION 1: QUICK VERDICT
 
 Overall Rating: {rating}
+Raw Score: {raw_total}/135
 Biggest Risk: {risk}
 
 Top 3 Fixes
@@ -675,170 +991,152 @@ Top 3 Fixes
             date=self.session_date,
             test_date=info['test_date'],
             rating=f['rating'].upper(),
+            raw_total=f['raw_total'],
             risk=self._get_biggest_risk(),
             sep=sep
         )
-        
+
         for i, fix in enumerate(self._get_top_fixes(), 1):
             report += "{}. {}\n".format(i, fix)
-        
+
         report += """
 {sep}
 
-SECTION 2: CATEGORY SCORES (EQUAL WEIGHT, 1-10 EACH)
+SECTION 2: CATEGORY SCORES
 
-A. Preparation and Planning Readiness
+================================================================================
+A. SOP COMPLIANCE ({a_total}/50)
+================================================================================
 
-Score: {prep}/10
+A1. Session Structure & Timing (10 pts)
+{a1_line}
 
-Justification:
-{prep_just}
+A2. Study Schedule & Exam Planning (14 pts)
+{a2_schedule_line}
+{a2_fl_line}
+{a2_aamc_line}
 
-Missing from Notes:
+A3. Pre/Post-Session Tasks (12 pts)
+{a3_presession_line}
+{a3_survey_line}
+{a3_postsession_line}
+{a3_shared_line}
+
+A4. Session-Specific Requirements (14 pts)
+{a4_line}
+
 """.format(
-            prep=self.scores['Preparation'],
-            prep_just=self.justifications['Preparation'],
+            a_total=f['a_total'],
+            a1_line=_score_line('a1_structure', 'Session structure & agenda', 10),
+            a2_schedule_line=_score_line('a2_schedule', 'Study schedule created', 4),
+            a2_fl_line=_score_line('a2_fl_exams', 'FL exam schedule with dates', 6),
+            a2_aamc_line=_score_line('a2_aamc', 'AAMC question packs scheduled', 4),
+            a3_presession_line=_score_line('a3_presession', 'Pre-session preparation', 3),
+            a3_survey_line=_score_line('a3_survey', 'Survey/intake form', 3),
+            a3_postsession_line=_score_line('a3_postsession_notes', 'Post-session notes created', 3),
+            a3_shared_line=_score_line('a3_shared', 'Document shared with student', 3),
+            a4_line=_score_line('a4_specific', 'Session-specific requirements', 14),
             sep=sep
         )
-        for item in self.missing_items['Preparation']:
-            report += "- {}\n".format(item)
-        
-        report += """
-{sep}
 
-B. Study Plan Construction Quality
+        report += """================================================================================
+B. COACHING QUALITY ({b_total}/50)
+================================================================================
 
-Score: {plan}/10
+B1. Socratic Method (15 pts)
+{b1_probing_line}
+{b1_student_line}
+{b1_remap_line}
 
-Justification:
-{plan_just}
+B2. Weakness Identification (15 pts)
+{b2_reasons_line}
+{b2_excuses_line}
+{b2_actionable_line}
 
-Missing from Notes:
+B3. Passage Practice (10 pts)
+{b3_qs_line}
+{b3_teaches_line}
+{b3_feedback_line}
+
+B4. Student Engagement (10 pts)
+{b4_takeaways_line}
+{b4_questions_line}
+{b4_timing_line}
+
 """.format(
-            plan=self.scores['Study Plan'],
-            plan_just=self.justifications['Study Plan'],
-            sep=sep
+            b_total=f['b_total'],
+            b1_probing_line=_score_line('b1_probing', 'Probing questions used', 5),
+            b1_student_line=_score_line('b1_student_talks', 'Student does the talking', 5),
+            b1_remap_line=_score_line('b1_no_remap', 'No direct answer-giving', 5),
+            b2_reasons_line=_score_line('b2_identifies_reasons', 'Identifies root causes', 5),
+            b2_excuses_line=_score_line('b2_no_excuses', 'No excuse-making language', 5),
+            b2_actionable_line=_score_line('b2_actionable', 'Actionable recommendations', 5),
+            b3_qs_line=_score_line('b3_three_qs', '3+ passage questions', 4),
+            b3_teaches_line=_score_line('b3_student_teaches', 'Student teaches back', 3),
+            b3_feedback_line=_score_line('b3_paragraph_feedback', 'Paragraph-level feedback', 3),
+            b4_takeaways_line=_score_line('b4_takeaways', 'Takeaways summarized', 4),
+            b4_questions_line=_score_line('b4_questions', 'Checks for questions', 3),
+            b4_timing_line=_score_line('b4_timing_accuracy', 'Timing/punctuality', 3)
         )
-        for item in self.missing_items['Study Plan']:
-            report += "- {}\n".format(item)
-        
-        report += """
-{sep}
 
-C. Personalization and Load Calibration
+        report += """================================================================================
+C. NOTES & DOCUMENTATION ({c_total}/20)
+================================================================================
 
-Score: {personal}/10
+{c_template_line}
+{c_overview_line}
+{c_detailed_line}
+{c_exam_line}
+{c_next_line}
+{c_activity_line}
 
-Justification:
-{personal_just}
-
-Missing from Notes:
 """.format(
-            personal=self.scores['Personalization'],
-            personal_just=self.justifications['Personalization'],
-            sep=sep
+            c_total=f['c_total'],
+            c_template_line=_score_line('c_template_named', 'Notes template used', 3),
+            c_overview_line=_score_line('c_overview_tab', 'Overview/snapshot section', 3),
+            c_detailed_line=_score_line('c_session_notes_detailed', 'Detailed session notes', 5),
+            c_exam_line=_score_line('c_exam_progress', 'Exam progress tracking', 3),
+            c_next_line=_score_line('c_next_steps_written', 'Next steps documented', 3),
+            c_activity_line=_score_line('c_activity_tracking', 'Activity tracking', 3)
         )
-        for item in self.missing_items['Personalization']:
-            report += "- {}\n".format(item)
-        
-        report += """
-{sep}
 
-D. Strategy Portion Execution
+        report += """================================================================================
+D. PROFESSIONALISM ({d_total}/15)
+================================================================================
 
-Score: {strategy}/10
+{d_demeanor_line}
+{d_guarantees_line}
+{d_channels_line}
+{d_ontime_line}
+{d_platforms_line}
 
-Justification:
-{strategy_just}
-
-Missing from Notes:
 """.format(
-            strategy=self.scores['Strategy'],
-            strategy_just=self.justifications['Strategy'],
-            sep=sep
+            d_total=f['d_total'],
+            d_demeanor_line=_score_line('d_demeanor', 'Professional demeanor', 3),
+            d_guarantees_line=_score_line('d_no_guarantees', 'No score guarantees', 3),
+            d_channels_line=_score_line('d_proper_channels', 'Proper comm channels', 3),
+            d_ontime_line=_score_line('d_on_time', 'On time', 3),
+            d_platforms_line=_score_line('d_approved_platforms', 'Approved platforms only', 3)
         )
-        for item in self.missing_items['Strategy']:
-            report += "- {}\n".format(item)
-        
-        report += """
-{sep}
 
-E. Clarity and Student Buy-In
+        report += """{sep}
 
-Score: {clarity}/10
-
-Justification:
-{clarity_just}
-
-Missing from Notes:
-""".format(
-            clarity=self.scores['Clarity'],
-            clarity_just=self.justifications['Clarity'],
-            sep=sep
-        )
-        for item in self.missing_items['Clarity']:
-            report += "- {}\n".format(item)
-        
-        report += """
-{sep}
-
-SECTION 3: SOP COMPLIANCE CHECKLIST (NOTES-BASED)
-
-SOP Item                                          | Present? | Evidence
---------------------------------------------------|----------|--------------------------------------------------
-Full-Length Exam schedule (10 FLs)                | {fl_status:8} | {fl_ev}
-AAMC Question Packs/Resources                     | {qp_status:8} | {qp_ev}
-Below-average topics (excluding course-covered)   | {topics_status:8} | {topics_ev}
-Weekly checklist                                  | {weekly_status:8} | {weekly_ev}
-Daily tasks for Week 1                            | {daily_status:8} | {daily_ev}
-Strategy portion notes                            | {strat_status:8} | {strat_ev}
-Tentative next session date                       | {next_status:8} | {next_ev}
-Google Doc shared                                 | {doc_status:8} | {doc_ev}
-Baseline score documented                         | {base_status:8} | {base_ev}
-
-Compliance Summary: {compliant} fully compliant, {partial} partial, {missing} missing
-
-{sep}
-
-SECTION 4: TRANSCRIPT VS. NOTES GAP ANALYSIS
+SECTION 3: TRANSCRIPT VS. NOTES GAP ANALYSIS
 
 What Was Discussed in Transcript (Should Have Been in Notes)
 
 Topic Discussed                                           | In Notes?
 ----------------------------------------------------------|----------
-""".format(
-            fl_status=notes_check['fl_exam_schedule']['status'],
-            fl_ev=notes_check['fl_exam_schedule']['evidence'][:50],
-            qp_status=notes_check['aamc_question_packs']['status'],
-            qp_ev=notes_check['aamc_question_packs']['evidence'][:50],
-            topics_status=notes_check['below_avg_topics']['status'],
-            topics_ev=notes_check['below_avg_topics']['evidence'][:50],
-            weekly_status=notes_check['weekly_checklist']['status'],
-            weekly_ev=notes_check['weekly_checklist']['evidence'][:50],
-            daily_status=notes_check['daily_tasks']['status'],
-            daily_ev=notes_check['daily_tasks']['evidence'][:50],
-            strat_status=notes_check['strategy_notes']['status'],
-            strat_ev=notes_check['strategy_notes']['evidence'][:50],
-            next_status=notes_check['next_session']['status'],
-            next_ev=notes_check['next_session']['evidence'][:50],
-            doc_status=notes_check['google_doc_shared']['status'],
-            doc_ev=notes_check['google_doc_shared']['evidence'][:50],
-            base_status=notes_check['baseline_documented']['status'],
-            base_ev=notes_check['baseline_documented']['evidence'][:50],
-            compliant=sum(1 for v in notes_check.values() if v['status'] == 'Yes'),
-            partial=sum(1 for v in notes_check.values() if v['status'] == 'Partial'),
-            missing=sum(1 for v in notes_check.values() if v['status'] == 'No'),
-            sep=sep
-        )
-        
+""".format(sep=sep)
+
         for topic, discussed, in_notes in gap_items:
             if discussed:
                 report += "{:57} | {}\n".format(topic[:57], in_notes)
-        
+
         report += """
 {sep}
 
-SECTION 5: RECOMMENDED NOTES REWRITE (NOTES V2)
+SECTION 4: RECOMMENDED NOTES REWRITE (NOTES V2)
 
 Given that multiple critical SOP items are missing from notes, below is a recommended rewrite.
 
@@ -848,21 +1146,21 @@ Given that multiple critical SOP items are missing from notes, below is a recomm
 
 {sep}
 
-SECTION 6: TUTOR FEEDBACK
+SECTION 5: TUTOR FEEDBACK
 
 What You Did Well
 
 """.format(notes_v2=notes_v2, sep=sep)
-        
+
         for i, (title, desc) in enumerate(positives, 1):
             report += "{}. {}\n   {}\n\n".format(i, title, desc)
-        
+
         report += """{sep}
 
 Areas for Improvement
 
 """.format(sep=sep)
-        
+
         for i, imp in enumerate(improvements, 1):
             report += """{}. {}
 
@@ -873,7 +1171,7 @@ Areas for Improvement
    How to fix: {}
 
 """.format(i, imp['title'], imp['what'], imp['why'], imp['fix'])
-        
+
         report += """{sep}
 
 Priority Actions Before Next Session
@@ -896,17 +1194,18 @@ FINAL SCORE SUMMARY
 
 Category                                | Score
 ----------------------------------------|-------
-Preparation & Planning Readiness        | {prep}/10
-Study Plan Construction Quality         | {plan}/10
-Personalization & Load Calibration      | {personal}/10
-Strategy Portion Execution              | {strategy}/10
-Clarity & Student Buy-In                | {clarity}/10
+A. SOP Compliance                       | {a_total}/50
+B. Coaching Quality                     | {b_total}/50
+C. Notes & Documentation                | {c_total}/20
+D. Professionalism                      | {d_total}/15
 ----------------------------------------|-------
-Average                                 | {avg}/10
+RAW TOTAL                               | {raw_total}/135
 
 {sep}
 
 OVERALL ASSESSMENT: {rating}
+
+Grade Scale: 120-135 Excellent | 100-119 Satisfactory | 80-99 Needs Improvement | Below 80 Unsatisfactory
 
 Summary:
 {summary}
@@ -919,48 +1218,48 @@ Recommended Actions:
 {sep}
 
 Graded by: JW Session Notes Grader Agent
-Grading Agent Version: 1.0
+Grading Agent Version: 2.0
+Rubric: 4-Category 135-Point System (SOP Compliance, Coaching Quality, Notes & Documentation, Professionalism)
 Reference Documents: first_session_sop_agent.md, grading_first_session_agent.md
 """.format(
             tutor=self.tutor_name.split()[0] if self.tutor_name else 'Tutor',
-            prep=self.scores['Preparation'],
-            plan=self.scores['Study Plan'],
-            personal=self.scores['Personalization'],
-            strategy=self.scores['Strategy'],
-            clarity=self.scores['Clarity'],
-            avg=f['average'],
+            a_total=f['a_total'],
+            b_total=f['b_total'],
+            c_total=f['c_total'],
+            d_total=f['d_total'],
+            raw_total=f['raw_total'],
             rating=f['rating'].upper(),
             summary=self._generate_summary(),
             sep=sep
         )
-        
+
         return report
-    
+
     def _generate_summary(self):
-        """Generate overall summary."""
-        avg = self.findings['average']
-        if avg >= 8.5:
-            return "Excellent session with comprehensive documentation. All major SOP items are addressed and the student has clear direction."
-        elif avg >= 7.0:
-            return "Good session with adequate documentation. Minor improvements recommended for completeness."
-        elif avg >= 5.0:
-            return "The tutoring session content appears solid based on transcript analysis. However, the session documentation is deficient. The student has minimal take-home artifacts: limited study schedule documentation, incomplete exam calendar, and sparse task lists. Without proper notes, the student cannot effectively reference what was discussed or follow a structured plan. This creates risk for student outcomes and does not fully meet SOP requirements."
+        """Generate overall summary based on new 135-point scale."""
+        raw = self.findings['raw_total']
+        if raw >= 120:
+            return "Excellent session with comprehensive documentation and strong coaching. All major SOP items are addressed and the student has clear direction."
+        elif raw >= 100:
+            return "Satisfactory session. Most SOP requirements met with adequate coaching quality. Minor improvements recommended for completeness."
+        elif raw >= 80:
+            return "The session needs improvement. While some elements were addressed, significant gaps exist in SOP compliance, coaching methodology, or documentation. The student may lack sufficient take-home artifacts to follow a structured study plan independently."
         else:
-            return "Significant documentation gaps identified. The session requires immediate follow-up to ensure the student has necessary study materials and clear direction. Priority action: Create comprehensive session notes immediately."
+            return "Unsatisfactory session with significant gaps across multiple categories. Immediate follow-up is required to ensure the student has necessary study materials, clear direction, and proper documentation. Priority action: address SOP compliance and create comprehensive session notes immediately."
 
 
 def send_email(to_emails, subject, body):
     """Send email using SMTP."""
     if not SMTP_USER or not SMTP_PASSWORD:
         return False
-    
+
     try:
         msg = MIMEMultipart()
         msg['Subject'] = subject
         msg['From'] = FROM_EMAIL
         msg['To'] = ', '.join(to_emails)
         msg.attach(MIMEText(body, 'plain', 'utf-8'))
-        
+
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
             server.starttls()
             server.login(SMTP_USER, SMTP_PASSWORD)
@@ -975,10 +1274,10 @@ class handler(BaseHTTPRequestHandler):
     def do_POST(self):
         content_length = int(self.headers['Content-Length'])
         post_data = self.rfile.read(content_length)
-        
+
         try:
             data = json.loads(post_data.decode('utf-8'))
-            
+
             required = ['student_name', 'tutor_name', 'tutor_email', 'session_date', 'transcript']
             for field in required:
                 if not data.get(field):
@@ -987,7 +1286,7 @@ class handler(BaseHTTPRequestHandler):
                     self.end_headers()
                     self.wfile.write(json.dumps({'success': False, 'error': 'Missing: ' + field}).encode())
                     return
-            
+
             grader = SessionGrader(
                 transcript=data['transcript'],
                 student_name=data['student_name'],
@@ -1013,18 +1312,22 @@ class handler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({
                 'success': True,
                 'scores': findings['scores'],
-                'average_score': findings['average'],
-                'overall_rating': findings['rating'],
+                'a_total': findings['a_total'],
+                'b_total': findings['b_total'],
+                'c_total': findings['c_total'],
+                'd_total': findings['d_total'],
+                'raw_total': findings['raw_total'],
+                'rating': findings['rating'],
                 'email_sent': email_sent,
                 'report': report
             }).encode())
-            
+
         except Exception as e:
             self.send_response(500)
             self.send_header('Content-type', 'application/json')
             self.end_headers()
             self.wfile.write(json.dumps({'success': False, 'error': str(e)}).encode())
-    
+
     def do_GET(self):
         self.send_response(200)
         self.send_header('Content-type', 'application/json')

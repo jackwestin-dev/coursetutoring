@@ -1,21 +1,38 @@
 # Score bands and when to flag for intervention
 
-The Session Grader assigns a **scaled score (0–100)** and an **overall rating** to each graded session. Directors receive a **daily digest** that lists tutors needing intervention first, then progress notes.
+The Session Grader assigns a score and an **overall rating** to each graded session. Directors receive a **daily digest** that lists tutors needing intervention first, then progress notes.
 
 ---
 
-## Score bands (how we flag)
+## Score bands by course type
+
+### CARS Strategy (scaled 0–100)
 
 | Score range | Band label | Meaning | Director action |
 |-------------|------------|---------|------------------|
 | **90–100** | Exceeds Expectations | Strong documentation and coaching; no issues. | None. |
 | **75–89** | Meets Expectations | Solid session; meets SOPs. | None. |
 | **60–74** | Needs Minor Calibration | Gaps in documentation or delivery; coachable. | **Flag:** Consider follow-up or calibration with the tutor. |
-| **&lt;60** | Needs Remediation | Significant gaps; does not meet SOPs. | **Intervention:** Prioritize 1:1 or structured remediation. |
+| **<60** | Needs Remediation | Significant gaps; does not meet SOPs. | **Intervention:** Prioritize 1:1 or structured remediation. |
+
+### 515+ Course & Intensive (raw score 0–135)
+
+| Score range | Band label | Meaning | Director action |
+|-------------|------------|---------|------------------|
+| **120–135** | Excellent | Covers all SOP items, strong coaching, thorough documentation. | None. |
+| **100–119** | Satisfactory | Minor gaps but fundamentally solid session. | None. |
+| **80–99** | Needs Improvement | Multiple SOP items missed or coaching quality concerns. | **Flag:** Consider follow-up or calibration with the tutor. |
+| **<80** | Unsatisfactory | Significant SOP non-compliance or poor coaching. | **Intervention:** Prioritize 1:1 or structured remediation. |
+
+The 515+/Intensive rubric uses 4 categories totaling 135 points:
+- **A. SOP Compliance** — 50 pts (37%)
+- **B. Coaching Quality** — 50 pts (37%)
+- **C. Notes & Documentation** — 20 pts (15%)
+- **D. Professionalism** — 15 pts (11%)
 
 ---
 
-## Who appears in “Tutors needing intervention”
+## Who appears in "Tutors needing intervention"
 
 The **daily email** starts with a section:
 
@@ -23,15 +40,14 @@ The **daily email** starts with a section:
 
 A tutor is included in this list if **any** of their sessions in the last 24 hours had:
 
-- **Score &lt; 75**, or  
-- **Rating** = “Needs Remediation” or “Needs Minor Calibration”
+- **CARS:** Score < 75, or Rating = "Needs Remediation" or "Needs Minor Calibration"
+- **515+/Intensive:** Score < 100, or Rating = "Unsatisfactory" or "Needs Improvement"
 
 So:
 
-- **Needs Remediation** → always listed (urgent).
-- **Needs Minor Calibration** → always listed (follow-up).
-- **Score 60–74** with a “Meets”-style label → still listed (below 75).
-- **Score 75+** and “Meets” or “Exceeds” → not listed.
+- **Unsatisfactory / Needs Remediation** → always listed (urgent).
+- **Needs Improvement / Needs Minor Calibration** → always listed (follow-up).
+- **Satisfactory / Meets** or above → not listed.
 
 The list is **one line per tutor** (no duplicate names); the line shows their worst score/rating in that period.
 
@@ -40,8 +56,8 @@ The list is **one line per tutor** (no duplicate names); the line shows their wo
 ## How to use the daily digest
 
 1. **Read the intervention list first** — these are the tutors to follow up with.
-2. **Remediation (&lt;60 / “Needs Remediation”)** — schedule intervention; do not wait.
-3. **Minor calibration (60–74 / “Needs Minor Calibration”)** — assign coaching or calibration as needed.
+2. **Unsatisfactory/Remediation** — schedule intervention; do not wait.
+3. **Needs Improvement/Minor Calibration** — assign coaching or calibration as needed.
 4. Use the **Progress & notes** section for volume and positives; the intervention list drives action.
 
 ---
