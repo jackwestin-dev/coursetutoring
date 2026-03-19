@@ -835,12 +835,11 @@ ${tutorEmailBody ? `
       let ps = null;
       const isCars = form.courseType === "cars";
       const scorePatterns = isCars ? [
-        /Scaled Score[^:*\n]*:?\*?\s*(\d+)\s*\/\s*100/i,
-        /\*\*Scaled Score\*\*:\s*(\d+)/i,
-        /FINAL SCORE[:\s]+(\d+)\s*[\/\-]\s*100/i,
-        /(\d+)\s*\/\s*100\s*[—\-]\s*(?:Exceeds|Meets|Needs)/i,
-        /\|\s*\*\*(\d+)\*\*\s*\|\s*\*\*100\*\*/i,
-        /Score[^0-9]*(\d+)\s*\/\s*100/i,
+        /\*\*TOTAL\*\*\s*\|\s*\*\*(\d+)\*\*\s*\|\s*\*\*125\*\*/i,
+        /TOTAL[^|]*\|\s*(\d+)\s*\|\s*125/i,
+        /\|\s*\*\*(\d+)\*\*\s*\|\s*\*\*125\*\*/i,
+        /Score[^0-9]*(\d+)\s*\/\s*125/i,
+        /TOTAL\s*\|\s*(\d+)\s*\|\s*125/i,
       ] : [
         /\*\*TOTAL\*\*\s*\|\s*\*\*(\d+)\*\*\s*\|\s*\*\*135\*\*/i,
         /TOTAL[^|]*\|\s*(\d+)\s*\|\s*135/i,
@@ -849,7 +848,7 @@ ${tutorEmailBody ? `
         /Scaled Score[^:*\n]*:?\*?\s*(\d+)\s*\/\s*100/i,
         /Score[^0-9]*(\d+)\s*\/\s*100/i,
       ];
-      const maxScore = isCars ? 100 : 135;
+      const maxScore = isCars ? 125 : 135;
       for (const re of scorePatterns) {
         const sm = gradeText.match(re);
         if (sm) {
@@ -864,7 +863,7 @@ ${tutorEmailBody ? `
       if (rm) {
         const r = rm[1].trim().replace(/\*/g, "");
         if (isCars) {
-          pr = r.includes("Exceeds") ? "Exceeds Expectations" : r.includes("Meets") ? "Meets Expectations" : r.includes("Minor") ? "Needs Minor Calibration" : "Needs Remediation";
+          pr = r.includes("Excellent") ? "Excellent" : r.includes("Satisfactory") ? "Satisfactory" : r.includes("Needs Improvement") || r.includes("Improvement") ? "Needs Improvement" : "Unsatisfactory";
         } else {
           pr = r.includes("Excellent") ? "Excellent" : r.includes("Satisfactory") ? "Satisfactory" : r.includes("Needs Improvement") || r.includes("Improvement") ? "Needs Improvement" : "Unsatisfactory";
         }
