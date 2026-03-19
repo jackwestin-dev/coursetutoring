@@ -27,9 +27,21 @@ FROM_EMAIL = os.environ.get("FROM_EMAIL", "grader@jackwestin.com")
 SMTP_USER = os.environ.get("SMTP_USER", "").strip() or FROM_EMAIL
 SMTP_PASSWORD = (os.environ.get("SMTP_PASSWORD", "") or "").strip().replace(" ", "")
 
-INTERVENTION_SCORE_THRESHOLD = 75
-INTERVENTION_RATINGS = ("Needs Remediation", "Needs Minor Calibration")
+INTERVENTION_RATINGS = ("Needs Improvement", "Unsatisfactory")
 DIGEST_DAYS = 3
+
+
+def max_score_for(course_type):
+    """Return max possible score for a given course type string."""
+    ct = (course_type or "").lower()
+    return 125 if ("cars" in ct) else 135
+
+
+def normalize_pct(score, course_type):
+    """Normalize a raw score to a 0–100 percentage for cross-rubric comparisons."""
+    if score is None:
+        return None
+    return round(score / max_score_for(course_type) * 100)
 
 
 def get_director_emails():
@@ -96,31 +108,49 @@ def fetch_all_sessions_for_tutor_history():
 
 def analyze_sessions(sessions):
     """Build analytics from session list."""
-    tutor_data = defaultdict(lambda: {"scores": [], "sessions": [], "ratings": []})
-    band_counts = {"exceeds": 0, "meets": 0, "calibration": 0, "remediation": 0}
+    tutor_data = defaultdict(lambda: {"scores": [], "sessions": [], "ratings": [], "pcts": []})
+    band_counts = {"excellent": 0, "satisfactory": 0, "needs_improvement": 0, "unsatisfactory": 0}
 
     for s in sessions:
         name = (s.get("tutor_name") or "Unknown").strip()
         score = s.get("score")
         rating = (s.get("rating") or "").strip()
+        ct = s.get("course_type", "")
         tutor_data[name]["scores"].append(score)
         tutor_data[name]["sessions"].append(s)
         tutor_data[name]["ratings"].append(rating)
-        if score is not None:
-            if score >= 90: band_counts["exceeds"] += 1
-            elif score >= 75: band_counts["meets"] += 1
-            elif score >= 60: band_counts["calibration"] += 1
-            else: band_counts["remediation"] += 1
+        pct = normalize_pct(score, ct)
+        tutor_data[name]["pcts"].append(pct)
+        # Classify by rating (rubric-aware — avoids cross-scale score comparison)
+        if rating == "Excellent":
+            band_counts["excellent"] += 1
+        elif rating == "Satisfactory":
+            band_counts["satisfactory"] += 1
+        elif rating == "Needs Improvement":
+            band_counts["needs_improvement"] += 1
+        elif rating == "Unsatisfactory":
+            band_counts["unsatisfactory"] += 1
 
     intervention = []
     performing = []
     for name, data in sorted(tutor_data.items()):
-        valid = [s for s in data["scores"] if s is not None]
-        avg = sum(valid) / len(valid) if valid else 0
-        worst = min(valid) if valid else 0
-        best = max(valid) if valid else 0
-        needs_flag = worst < INTERVENTION_SCORE_THRESHOLD or any(r in INTERVENTION_RATINGS for r in data["ratings"])
-        entry = {"name": name, "avg": round(avg), "worst": worst, "best": best, "count": len(data["sessions"]), "scores": valid, "ratings": data["ratings"]}
+        valid_pcts = [p for p in data["pcts"] if p is not None]
+        avg_pct = round(sum(valid_pcts) / len(valid_pcts)) if valid_pcts else 0
+        worst_pct = min(valid_pcts) if valid_pcts else 0
+        best_pct = max(valid_pcts) if valid_pcts else 0
+        valid_raw = [s for s in data["scores"] if s is not None]
+        worst_raw = min(valid_raw) if valid_raw else 0
+        needs_flag = any(r in INTERVENTION_RATINGS for r in data["ratings"])
+        entry = {
+            "name": name,
+            "avg": avg_pct,        # normalized 0–100 for display
+            "worst": worst_pct,    # normalized 0–100 for bar/color
+            "worst_raw": worst_raw,
+            "best": best_pct,
+            "count": len(data["sessions"]),
+            "scores": valid_pcts,  # normalized for sparkline
+            "ratings": data["ratings"],
+        }
         if needs_flag:
             intervention.append(entry)
         else:
@@ -132,34 +162,35 @@ def analyze_sessions(sessions):
     return tutor_data, band_counts, intervention, performing
 
 
-def build_score_bar_svg(score, max_w=200):
-    if score is None:
+def build_score_bar_svg(pct, max_w=200):
+    """pct is already normalized 0–100."""
+    if pct is None:
         return ""
-    pct = min(100, max(0, score))
+    pct = min(100, max(0, pct))
     w = int(pct / 100 * max_w)
     color = "#dc2626" if pct < 60 else "#d97706" if pct < 75 else "#8A5CF6" if pct < 90 else "#16a34a"
     return f'<div style="display:inline-block;width:{max_w}px;height:14px;background:#f3f4f6;border-radius:7px;vertical-align:middle;margin-right:8px"><div style="width:{w}px;height:14px;background:{color};border-radius:7px"></div></div>'
 
 
 def build_trend_sparkline(scores, width=120, height=32):
-    """Build an inline SVG sparkline for score trend."""
-    if len(scores) < 2:
+    """Build an inline SVG sparkline. scores are normalized 0–100 percentages."""
+    valid = [s for s in scores if s is not None]
+    if len(valid) < 2:
         return ""
-    n = len(scores)
+    n = len(valid)
     x_step = width / max(n - 1, 1)
-    y_min, y_max = 0, 100
     points = []
-    for i, s in enumerate(scores):
+    for i, s in enumerate(valid):
         x = round(i * x_step, 1)
-        y = round(height - ((s - y_min) / (y_max - y_min)) * height, 1)
+        y = round(height - (s / 100) * height, 1)
         points.append(f"{x},{y}")
     polyline = " ".join(points)
-    last_score = scores[-1]
+    last_score = valid[-1]
     color = "#dc2626" if last_score < 60 else "#d97706" if last_score < 75 else "#8A5CF6" if last_score < 90 else "#16a34a"
-    trend = scores[-1] - scores[0]
+    trend = valid[-1] - valid[0]
     arrow = "&#9650;" if trend > 0 else "&#9660;" if trend < 0 else "&#8212;"
     arrow_color = "#16a34a" if trend > 0 else "#dc2626" if trend < 0 else "#5E6573"
-    return f'<svg width="{width}" height="{height}" style="vertical-align:middle"><polyline points="{polyline}" fill="none" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> <span style="font-size:12px;color:{arrow_color};font-weight:700">{arrow} {abs(trend):+d}</span>'
+    return f'<svg width="{width}" height="{height}" style="vertical-align:middle"><polyline points="{polyline}" fill="none" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> <span style="font-size:12px;color:{arrow_color};font-weight:700">{arrow} {abs(trend):+.0f}%</span>'
 
 
 def summarize_with_claude(sessions, intervention, performing):
@@ -173,7 +204,9 @@ def summarize_with_claude(sessions, intervention, performing):
 Write in professional but engaging tone. Use specific names and numbers. Plain text only, no markdown."""
     rows = []
     for s in sessions[:50]:
-        rows.append(f"- {s.get('tutor_name')} | Student: {s.get('student_name')} | {s.get('session_date')} | Session {s.get('session_number')} | {s.get('course_type')} | Score {s.get('score')}/100 | {s.get('rating')}")
+        ct = s.get("course_type", "")
+        max_pts = max_score_for(ct)
+        rows.append(f"- {s.get('tutor_name')} | Student: {s.get('student_name')} | {s.get('session_date')} | Session {s.get('session_number')} | {ct} | Score {s.get('score')}/{max_pts} | {s.get('rating')}")
     int_names = [t["name"] for t in intervention]
     perf_names = [t["name"] for t in performing]
     user_content = (
@@ -218,21 +251,25 @@ def build_html_digest(sessions, band_counts, intervention, performing, narrative
     total = len(sessions)
     total_tutors = len(set((s.get("tutor_name") or "").strip() for s in sessions if s.get("tutor_name")))
     avg_score_all = 0
-    valid_scores = [s.get("score") for s in sessions if s.get("score") is not None]
-    if valid_scores:
-        avg_score_all = round(sum(valid_scores) / len(valid_scores))
+    valid_pcts = [normalize_pct(s.get("score"), s.get("course_type", "")) for s in sessions if s.get("score") is not None]
+    valid_pcts = [p for p in valid_pcts if p is not None]
+    if valid_pcts:
+        avg_score_all = round(sum(valid_pcts) / len(valid_pcts))
 
-    # Tutor history from 30-day data for sparklines
+    # Tutor history from 30-day data for sparklines (normalized 0–100)
     tutor_history = defaultdict(list)
     if all_sessions_30d:
         sorted_30d = sorted(all_sessions_30d, key=lambda s: s.get("created_at", ""))
         for s in sorted_30d:
             name = (s.get("tutor_name") or "").strip()
             score = s.get("score")
-            if name and score is not None:
-                tutor_history[name].append(score)
+            ct = s.get("course_type", "")
+            pct = normalize_pct(score, ct)
+            if name and pct is not None:
+                tutor_history[name].append(pct)
 
     avg_color = "#dc2626" if avg_score_all < 60 else "#d97706" if avg_score_all < 75 else "#8A5CF6" if avg_score_all < 90 else "#16a34a"
+    # avg_score_all is a normalized 0–100 percentage
     n_int = len(intervention)
     n_perf = len(performing)
     band_total = sum(band_counts.values()) or 1
@@ -279,17 +316,17 @@ def build_html_digest(sessions, band_counts, intervention, performing, narrative
   <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#5E6573;margin-bottom:10px">Score Distribution</div>
   <div style="height:24px;border-radius:12px;overflow:hidden;display:flex;background:#f3f4f6">
     {"".join([
-        f'<div style="width:{pct(band_counts["remediation"])}%;background:#dc2626;height:24px"></div>' if band_counts["remediation"] else "",
-        f'<div style="width:{pct(band_counts["calibration"])}%;background:#d97706;height:24px"></div>' if band_counts["calibration"] else "",
-        f'<div style="width:{pct(band_counts["meets"])}%;background:#8A5CF6;height:24px"></div>' if band_counts["meets"] else "",
-        f'<div style="width:{pct(band_counts["exceeds"])}%;background:#16a34a;height:24px"></div>' if band_counts["exceeds"] else "",
+        f'<div style="width:{pct(band_counts["unsatisfactory"])}%;background:#dc2626;height:24px"></div>' if band_counts["unsatisfactory"] else "",
+        f'<div style="width:{pct(band_counts["needs_improvement"])}%;background:#d97706;height:24px"></div>' if band_counts["needs_improvement"] else "",
+        f'<div style="width:{pct(band_counts["satisfactory"])}%;background:#8A5CF6;height:24px"></div>' if band_counts["satisfactory"] else "",
+        f'<div style="width:{pct(band_counts["excellent"])}%;background:#16a34a;height:24px"></div>' if band_counts["excellent"] else "",
     ])}
   </div>
   <div style="display:flex;gap:16px;margin-top:8px;flex-wrap:wrap">
-    <span style="font-size:11px;color:#dc2626;font-weight:600">&#9632; Remediation ({band_counts["remediation"]})</span>
-    <span style="font-size:11px;color:#d97706;font-weight:600">&#9632; Calibration ({band_counts["calibration"]})</span>
-    <span style="font-size:11px;color:#8A5CF6;font-weight:600">&#9632; Meets ({band_counts["meets"]})</span>
-    <span style="font-size:11px;color:#16a34a;font-weight:600">&#9632; Exceeds ({band_counts["exceeds"]})</span>
+    <span style="font-size:11px;color:#dc2626;font-weight:600">&#9632; Unsatisfactory ({band_counts["unsatisfactory"]})</span>
+    <span style="font-size:11px;color:#d97706;font-weight:600">&#9632; Needs Improvement ({band_counts["needs_improvement"]})</span>
+    <span style="font-size:11px;color:#8A5CF6;font-weight:600">&#9632; Satisfactory ({band_counts["satisfactory"]})</span>
+    <span style="font-size:11px;color:#16a34a;font-weight:600">&#9632; Excellent ({band_counts["excellent"]})</span>
   </div>
 </div>
 """
@@ -307,7 +344,7 @@ def build_html_digest(sessions, band_counts, intervention, performing, narrative
             bar = build_score_bar_svg(t["worst"], 160)
             sparkline = build_trend_sparkline(tutor_history.get(t["name"], t["scores"]))
             worst_color = "#dc2626" if t["worst"] < 60 else "#d97706"
-            ratings_str = ", ".join(set(r for r in t["ratings"] if r in INTERVENTION_RATINGS))
+            ratings_str = ", ".join(dict.fromkeys(r for r in t["ratings"] if r in INTERVENTION_RATINGS))
             html += f"""
   <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:16px 18px;margin-bottom:10px">
     <table style="width:100%"><tr>
@@ -324,7 +361,7 @@ def build_html_digest(sessions, band_counts, intervention, performing, narrative
         {sparkline or '<span style="font-size:11px;color:#9CA3AF">Not enough data</span>'}
       </td>
     </tr></table>
-    <div style="margin-top:10px">{bar} <span style="font-size:12px;color:{worst_color};font-weight:700">{t["worst"]}/100</span></div>
+    <div style="margin-top:10px">{bar} <span style="font-size:12px;color:{worst_color};font-weight:700">{t["worst"]}%</span></div>
   </div>
 """
     else:
@@ -346,7 +383,7 @@ def build_html_digest(sessions, band_counts, intervention, performing, narrative
             bg = "#fff" if i % 2 == 0 else "#FAFAFF"
             score_color = "#16a34a" if t["avg"] >= 90 else "#8A5CF6"
             sparkline = build_trend_sparkline(tutor_history.get(t["name"], t["scores"]))
-            html += f'<tr style="border-bottom:1px solid #E5E7EB"><td style="padding:10px 12px;background:{bg};font-weight:600;color:#2B2F40">{esc(t["name"])}</td><td style="text-align:center;padding:10px 12px;background:{bg};color:#5E6573">{t["count"]}</td><td style="text-align:center;padding:10px 12px;background:{bg};font-weight:700;color:{score_color}">{t["avg"]}/100</td><td style="text-align:right;padding:10px 12px;background:{bg}">{sparkline or "—"}</td></tr>'
+            html += f'<tr style="border-bottom:1px solid #E5E7EB"><td style="padding:10px 12px;background:{bg};font-weight:600;color:#2B2F40">{esc(t["name"])}</td><td style="text-align:center;padding:10px 12px;background:{bg};color:#5E6573">{t["count"]}</td><td style="text-align:center;padding:10px 12px;background:{bg};font-weight:700;color:{score_color}">{t["avg"]}%</td><td style="text-align:right;padding:10px 12px;background:{bg}">{sparkline or "—"}</td></tr>'
         html += "</table>"
     else:
         html += '<p style="color:#5E6573;font-size:13px;text-align:center">No sessions from on-track tutors in this period.</p>'
@@ -363,11 +400,11 @@ def build_html_digest(sessions, band_counts, intervention, performing, narrative
     # Score bands legend + footer
     html += f"""
 <div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:0 0 16px 16px;padding:16px 32px;text-align:center">
-  <span style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#5E6573">Score bands: </span>
-  <span style="padding:3px 8px;border-radius:6px;background:#f0fdf4;border:1px solid #bbf7d0;font-size:11px;color:#16a34a;font-weight:600">90-100 Exceeds</span>
-  <span style="padding:3px 8px;border-radius:6px;background:#eff6ff;border:1px solid #bfdbfe;font-size:11px;color:#2563eb;font-weight:600;margin-left:4px">75-89 Meets</span>
-  <span style="padding:3px 8px;border-radius:6px;background:#fffbeb;border:1px solid #fde68a;font-size:11px;color:#d97706;font-weight:600;margin-left:4px">60-74 Coach</span>
-  <span style="padding:3px 8px;border-radius:6px;background:#fef2f2;border:1px solid #fecaca;font-size:11px;color:#dc2626;font-weight:600;margin-left:4px">&lt;60 Remediate</span>
+  <span style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#5E6573">Ratings (% of max): </span>
+  <span style="padding:3px 8px;border-radius:6px;background:#f0fdf4;border:1px solid #bbf7d0;font-size:11px;color:#16a34a;font-weight:600">89-100% Excellent</span>
+  <span style="padding:3px 8px;border-radius:6px;background:#eff6ff;border:1px solid #bfdbfe;font-size:11px;color:#2563eb;font-weight:600;margin-left:4px">74-88% Satisfactory</span>
+  <span style="padding:3px 8px;border-radius:6px;background:#fffbeb;border:1px solid #fde68a;font-size:11px;color:#d97706;font-weight:600;margin-left:4px">59-73% Needs Improvement</span>
+  <span style="padding:3px 8px;border-radius:6px;background:#fef2f2;border:1px solid #fecaca;font-size:11px;color:#dc2626;font-weight:600;margin-left:4px">&lt;59% Unsatisfactory</span>
 </div>
 
 <p style="text-align:center;font-size:11px;color:#9CA3AF;margin-top:18px">JW Session Grader · Tutor Progress Report · Every {DIGEST_DAYS} days</p>
@@ -388,13 +425,13 @@ def build_plain_text(sessions, intervention, performing, narrative):
     ]
     if intervention:
         for t in intervention:
-            ratings = ", ".join(set(r for r in t["ratings"] if r in INTERVENTION_RATINGS))
-            parts.append(f"  {t['name']} — Worst: {t['worst']}/100 | Avg: {t['avg']}/100 | {t['count']} session(s) | {ratings or 'Below threshold'}")
+            ratings = ", ".join(dict.fromkeys(r for r in t["ratings"] if r in INTERVENTION_RATINGS))
+            parts.append(f"  {t['name']} — Worst: {t['worst']}% | Avg: {t['avg']}% | {t['count']} session(s) | {ratings or 'Below threshold'}")
     else:
         parts.append("  (None)")
     parts += ["", "=" * 50, "TUTORS ON TRACK", "=" * 50, ""]
     for t in performing:
-        parts.append(f"  {t['name']} — Avg: {t['avg']}/100 | {t['count']} session(s)")
+        parts.append(f"  {t['name']} — Avg: {t['avg']}% | {t['count']} session(s)")
     parts += ["", "-" * 50, "ANALYSIS & RECOMMENDATIONS", "-" * 50, "", narrative or "No summary.", ""]
     return "\n".join(parts)
 
