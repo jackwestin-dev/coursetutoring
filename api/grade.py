@@ -31,7 +31,8 @@ class SessionGrader:
     """Grader for Session 1 tutoring notes."""
 
     def __init__(self, transcript, student_name, tutor_name, session_date, student_notes='',
-                 sop_study_schedule='no', sop_question_packs='no', sop_full_length_exams='no'):
+                 sop_study_schedule='no', sop_question_packs='no', sop_full_length_exams='no',
+                 course_type='515', session_number='1'):
         self.transcript = transcript
         self.student_name = student_name
         self.tutor_name = tutor_name
@@ -40,6 +41,8 @@ class SessionGrader:
         self.sop_study_schedule = (sop_study_schedule or 'no').lower()
         self.sop_question_packs = (sop_question_packs or 'no').lower()
         self.sop_full_length_exams = (sop_full_length_exams or 'no').lower()
+        self.course_type = (course_type or '515').lower()
+        self.session_number = str(session_number or '1')
         self.findings = None
         self.scores = {}
         self.justifications = {}
@@ -233,6 +236,8 @@ class SessionGrader:
     
     def grade(self):
         """Perform grading and return findings."""
+        if self.course_type == 'cars':
+            return self._grade_cars()
         info = self.extract_info()
         notes_check = self.check_notes_present()
         
@@ -641,6 +646,8 @@ Document shared with: anastasia@jackwestin.com, michaelmel@jackwestin.com
         """Generate the full comprehensive grading report in clean format."""
         if not self.findings:
             self.grade()
+        if self.course_type == 'cars':
+            return self._generate_cars_report()
         
         f = self.findings
         info = f['info']
@@ -949,6 +956,332 @@ Reference Documents: first_session_sop_agent.md, grading_first_session_agent.md
             return "Significant documentation gaps identified. The session requires immediate follow-up to ensure the student has necessary study materials and clear direction. Priority action: Create comprehensive session notes immediately."
 
 
+    # ─── CARS Strategy Course grading (125-point rubric, Sessions 1-2) ────────
+
+    def _grade_cars(self):
+        """Grade using the CARS Strategy Course 125-point rubric."""
+        text = (self.transcript or '').lower()
+        notes = (self.student_notes or '').lower()
+        combined = text + ' ' + notes
+
+        # ── A. SOP Compliance (45 pts) ──
+        # A1. Session Structure & Timing (10 pts)
+        a1 = 0
+        # Follows SOP time blocks (4 pts) — check for session structure evidence
+        if re.search(r'(?:intro|welcome|how are you|good to see)', text) and re.search(r'(?:wrap.?up|takeaway|closing|next steps)', text):
+            a1 += 4
+        elif re.search(r'(?:intro|welcome|how are you)', text) or re.search(r'(?:wrap.?up|takeaway|closing)', text):
+            a1 += 2
+        # All required agenda items covered (4 pts)
+        agenda_signals = sum(1 for p in [r'video', r'strateg', r'passage', r'mapping', r'question'] if re.search(p, text))
+        if agenda_signals >= 3:
+            a1 += 4
+        elif agenda_signals >= 1:
+            a1 += 2
+        # Wrap-up not skipped or rushed (2 pts)
+        if re.search(r'(?:takeaway|progression|next steps|questions?\s*(?:for me|before we))', text):
+            a1 += 2
+
+        # A2. Study Schedule & Exam Planning (12 pts)
+        a2 = 0
+        # CARS study schedule in Google Sheet (4 pts)
+        if self.sop_study_schedule == 'yes' or re.search(r'(?:study schedule|google sheet|spreadsheet)', combined):
+            a2 += 4
+        elif self.sop_study_schedule == 'partial':
+            a2 += 2
+        # 6+ FLs scheduled with proper cadence (5 pts) — check for March 5 placeholder
+        total_dates, march5_count = self._count_march5_exams(combined)
+        fl_refs = re.findall(r'(?:full.?length|FL|practice\s*exam)', combined, re.I)
+        if self.sop_full_length_exams == 'yes':
+            a2 += 5
+        elif self.sop_full_length_exams == 'partial':
+            a2 += 3
+        elif len(fl_refs) >= 6 and (march5_count == 0 or march5_count < total_dates * 0.3):
+            a2 += 5
+        elif len(fl_refs) >= 4 and march5_count < total_dates * 0.7:
+            a2 += 3
+        # Real test day added (3 pts)
+        if re.search(r'(?:test\s*(?:date|day)|mcat\s*(?:is|on|date))', combined):
+            a2 += 3
+
+        # A3. Pre-Session & Post-Session Tasks (12 pts)
+        a3 = 0
+        # Pre-session notes completed (3 pts)
+        if re.search(r'pre.?session\s*notes?', combined) or re.search(r'(?:before\s*(?:the|our)\s*session|prepared|reviewed.*before)', combined):
+            a3 += 3
+        # Student data reviewed (3 pts)
+        if re.search(r'(?:survey|diagnostic|baseline|passage\s*(?:breakdown|video))', combined):
+            a3 += 3
+        # Post-session notes completed (3 pts)
+        if re.search(r'(?:in.?session\s*notes?|session\s*notes?\s*completed?)', combined):
+            a3 += 3
+        elif notes.strip():
+            a3 += 3  # notes exist = evidence of documentation
+        # Notes shared with directors (3 pts)
+        if re.search(r'(?:shared?\s*with|molly|carl|anastasia)', combined):
+            a3 += 3
+
+        # A4. Session-Specific Requirements (11 pts)
+        a4 = 0
+        if self.session_number == '1':
+            # S1: Booking link shared (3 pts)
+            if re.search(r'(?:calendly|booking|schedule.*next|link.*next)', combined):
+                a4 += 3
+            # S1: 2+ CARS strategy videos recommended (3 pts)
+            video_keywords = ['reading for arguments', 'reading for support', 'analogy', 'assumption',
+                              'subtle weakener', 'mapping tips', 'strategy video']
+            video_matches = sum(1 for v in video_keywords if v in combined)
+            if video_matches >= 2:
+                a4 += 3
+            elif video_matches >= 1:
+                a4 += 1
+            # S1 auto-award S2 items (5 pts)
+            a4 += 5
+        else:  # Session 2
+            # S2: Timed CARS HW tracker reviewed (3 pts)
+            if re.search(r'(?:hw\s*tracker|homework\s*tracker|timed\s*cars|cars\s*assignment)', combined):
+                a4 += 3
+            # S2: Test-day troubleshooting toolkit (2 pts)
+            if re.search(r'(?:troubleshoot|test.?day|running\s*out\s*of\s*time|toolkit)', combined):
+                a4 += 2
+            # S2 auto-award S1 items (6 pts → cap to maintain 11 total, so award remaining)
+            a4 += 6
+
+        sop_total = a1 + a2 + a3 + a4
+
+        # ── B. Coaching Quality (45 pts) ──
+        # B1. Socratic Method & Guided Questioning (15 pts)
+        b1 = 0
+        probing_patterns = [r'what do you think', r'why (?:is|do|would)', r'how would you',
+                            r'can you explain', r'walk me through', r'tell me',
+                            r'in your own words', r'what happens']
+        probing_count = sum(len(re.findall(p, text)) for p in probing_patterns)
+        if probing_count >= 5:
+            b1 += 5
+        elif probing_count >= 2:
+            b1 += 3
+        # Student does most talking (5 pts) — no long monologues
+        # Approximate: check transcript doesn't have huge tutor blocks
+        b1 += 5  # default full unless flagged
+        # Doesn't re-map for student (5 pts)
+        if not re.search(r'(?:let me (?:map|do) (?:it|this) for you|i\'ll map)', text):
+            b1 += 5
+
+        # B2. CARS-Specific Coaching (15 pts)
+        b2 = 0
+        # Identifies CARS error types (5 pts)
+        error_types = ['paragraph map', 'main idea', 'misread', 'overconfident', 'overthink']
+        error_count = sum(1 for e in error_types if e in text)
+        if error_count >= 2:
+            b2 += 5
+        elif error_count >= 1:
+            b2 += 3
+        # Doesn't let excuses slide (5 pts)
+        excuse_patterns = [r'just guess', r'silly mistake', r'not good at cars', r'i suck at']
+        has_excuses = any(re.search(p, text) for p in excuse_patterns)
+        followup_patterns = [r'let\'s look at', r'walk me through', r'what made you', r'why did you']
+        has_followup = any(re.search(p, text) for p in followup_patterns)
+        if has_excuses and has_followup:
+            b2 += 5
+        elif not has_excuses:
+            b2 += 5  # no excuses to catch = full credit
+        # WHY behind JW mapping strategies (5 pts)
+        if re.search(r'(?:why we|reason.*map|purpose.*map|jw.*approach|jack westin.*method|because.*map)', text):
+            b2 += 5
+        elif re.search(r'(?:map|mapping|paragraph\s*map)', text):
+            b2 += 3
+
+        # B3. Passage Practice Execution (8 pts)
+        b3 = 0
+        # 3+ questions reviewed (3 pts)
+        question_refs = re.findall(r'question\s*(?:\d|#|number)', text)
+        if len(question_refs) >= 3 or re.search(r'(?:three|3)\s*(?:or more\s*)?questions?', text):
+            b3 += 3
+        elif question_refs or re.search(r'question', text):
+            b3 += 1
+        # Student reads aloud and teaches passage (3 pts)
+        if re.search(r'(?:read\s*(?:it\s*)?aloud|read\s*(?:this|the)\s*(?:sentence|paragraph)|teach.*passage|explain.*passage)', text):
+            b3 += 3
+        elif re.search(r'(?:read|reading)', text):
+            b3 += 1
+        # Feedback per paragraph (2 pts)
+        if re.search(r'(?:paragraph\s*(?:one|two|three|1|2|3)|per\s*paragraph|each\s*paragraph|feedback.*paragraph)', text):
+            b3 += 2
+
+        # B4. Student Engagement & Takeaways (7 pts)
+        b4 = 0
+        # Main takeaway (3 pts)
+        if re.search(r'(?:takeaway|what did you learn|what.*take away|biggest\s*(?:thing|lesson))', text):
+            b4 += 3
+        # Questions/concerns (2 pts)
+        if re.search(r'(?:any questions|do you have.*question|before we (?:end|wrap)|anything else)', text):
+            b4 += 2
+        # Timing AND accuracy (2 pts)
+        has_timing = bool(re.search(r'(?:timing|time|minutes|9 passages|90 min|pace|speed)', text))
+        has_accuracy = bool(re.search(r'(?:accura|correct|wrong|missed|score|percent)', text))
+        if has_timing and has_accuracy:
+            b4 += 2
+        elif has_timing or has_accuracy:
+            b4 += 1
+
+        coaching_total = b1 + b2 + b3 + b4
+
+        # ── C. Notes & Documentation (20 pts) ──
+        c = 0
+        # Template properly named and linked (3 pts)
+        if re.search(r'(?:course tutoring note|tutoring note.*tutor name)', notes):
+            c += 3
+        elif notes.strip():
+            c += 1
+        # Student Overview tab completed (3 pts)
+        if re.search(r'(?:overview|survey|diagnostic|baseline)', notes):
+            c += 3
+        # In-session notes detailed and specific (5 pts)
+        if len(notes) > 500:
+            c += 5
+        elif len(notes) > 200:
+            c += 3
+        elif notes.strip():
+            c += 1
+        # Exam Progress tab updated (3 pts)
+        if re.search(r'(?:exam\s*progress|fl\s*(?:score|progress|track))', notes):
+            c += 3
+        # Next steps clearly written (3 pts)
+        if re.search(r'(?:next\s*steps?|action\s*items?|homework|assignment)', notes):
+            c += 3
+        elif re.search(r'(?:next\s*steps?|action\s*items?)', text):
+            c += 1
+        # Activity Completion Tracking Col M (3 pts)
+        if re.search(r'(?:activity\s*completion|column\s*m|col\s*m|tracking\s*spreadsheet)', combined):
+            c += 3
+
+        # ── D. Professionalism (15 pts) ──
+        d = 0
+        # Calm, supportive (3 pts) — deduct for red flags
+        if not re.search(r'(?:completely wrong|that\'s wrong|stupid|terrible)', text):
+            d += 3
+        # No score guarantees (3 pts)
+        if not re.search(r'(?:you\'ll (?:definitely|for sure) get|guarantee|promise.*score)', text):
+            d += 3
+        # Proper channels (3 pts)
+        if not re.search(r'(?:\$\d|price|cost|payment)', text):
+            d += 3
+        # On time (3 pts) — assume yes unless evidence otherwise
+        d += 3
+        # Approved platforms only (3 pts)
+        if not re.search(r'(?:my (?:cell|phone|number|instagram|snapchat)|text me at|dm me)', text):
+            d += 3
+
+        raw_total = sop_total + coaching_total + c + d
+
+        # Rating
+        if raw_total >= 112:
+            rating = 'Excellent'
+        elif raw_total >= 93:
+            rating = 'Satisfactory'
+        elif raw_total >= 74:
+            rating = 'Needs Improvement'
+        else:
+            rating = 'Unsatisfactory'
+
+        self.findings = {
+            'info': {'session_number': self.session_number},
+            'scores': {
+                'a1': a1, 'a2': a2, 'a3': a3, 'a4': a4,
+                'b1': b1, 'b2': b2, 'b3': b3, 'b4': b4,
+                'c': c, 'd': d,
+            },
+            'sop_total': sop_total,
+            'coaching_total': coaching_total,
+            'notes_total': c,
+            'professionalism_total': d,
+            'raw_total': raw_total,
+            'max_total': 125,
+            'rating': rating,
+        }
+        return self.findings
+
+    def _generate_cars_report(self):
+        """Generate the CARS Strategy Course grading report."""
+        f = self.findings
+        s = f['scores']
+        sep = '________________________________________________________________________________'
+
+        report = """CARS STRATEGY COURSE — SESSION {session} GRADING REPORT
+
+Student: {student}
+Tutor: {tutor}
+Session Date: {date}
+Course: CARS Strategy (Sessions 1-2)
+Graded By: JW CARS Session Grader (Agent)
+
+{sep}
+
+QUICK VERDICT
+
+Overall Rating: {rating}
+Score: {raw}/{max} ({pct}%)
+
+{sep}
+
+CATEGORY SCORES
+
+A. SOP Compliance — {sop}/45
+  A1. Session Structure & Timing: {a1}/10
+  A2. Study Schedule & Exam Planning: {a2}/12
+  A3. Pre-Session & Post-Session Tasks: {a3}/12
+  A4. Session-Specific Requirements (S{session}): {a4}/11
+
+B. Coaching Quality — {coaching}/45
+  B1. Socratic Method & Guided Questioning: {b1}/15
+  B2. CARS-Specific Coaching: {b2}/15
+  B3. Passage Practice Execution: {b3}/8
+  B4. Student Engagement & Takeaways: {b4}/7
+
+C. Notes & Documentation — {notes}/20
+
+D. Professionalism — {prof}/15
+
+{sep}
+
+FINAL SCORE SUMMARY
+
+Category                    | Score | Max
+----------------------------|-------|-----
+A. SOP Compliance           | {sop:3} |  45
+B. Coaching Quality         | {coaching:3} |  45
+C. Notes & Documentation    | {notes:3} |  20
+D. Professionalism          | {prof:3} |  15
+----------------------------|-------|-----
+TOTAL                       | {raw:3} | 125
+
+Overall Rating: {rating}
+
+Grade Scale: 112-125 Excellent | 93-111 Satisfactory | 74-92 Needs Improvement | <74 Unsatisfactory
+
+{sep}
+
+Graded by: JW CARS Session Grader Agent
+""".format(
+            session=self.session_number,
+            student=self.student_name,
+            tutor=self.tutor_name,
+            date=self.session_date,
+            rating=f['rating'],
+            raw=f['raw_total'],
+            max=f['max_total'],
+            pct=round(f['raw_total'] / 125 * 100),
+            sop=f['sop_total'],
+            coaching=f['coaching_total'],
+            notes=f['notes_total'],
+            prof=f['professionalism_total'],
+            a1=s['a1'], a2=s['a2'], a3=s['a3'], a4=s['a4'],
+            b1=s['b1'], b2=s['b2'], b3=s['b3'], b4=s['b4'],
+            sep=sep,
+        )
+        return report
+
+
 def send_email(to_emails, subject, body):
     """Send email using SMTP."""
     if not SMTP_USER or not SMTP_PASSWORD:
@@ -997,6 +1330,8 @@ class handler(BaseHTTPRequestHandler):
                 sop_study_schedule=data.get('sop_study_schedule', 'no'),
                 sop_question_packs=data.get('sop_question_packs', 'no'),
                 sop_full_length_exams=data.get('sop_full_length_exams', 'no'),
+                course_type=data.get('course_type', '515'),
+                session_number=data.get('session_number', '1'),
             )
 
             findings = grader.grade()
@@ -1007,17 +1342,23 @@ class handler(BaseHTTPRequestHandler):
                 data['student_name'], data['tutor_name'])
             email_sent = send_email(DIRECTOR_EMAILS, subject, report)
 
+            response_data = {
+                'success': True,
+                'scores': findings['scores'],
+                'overall_rating': findings['rating'],
+                'email_sent': email_sent,
+                'report': report,
+            }
+            if grader.course_type == 'cars':
+                response_data['raw_total'] = findings['raw_total']
+                response_data['max_total'] = findings['max_total']
+            else:
+                response_data['average_score'] = findings['average']
+
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.end_headers()
-            self.wfile.write(json.dumps({
-                'success': True,
-                'scores': findings['scores'],
-                'average_score': findings['average'],
-                'overall_rating': findings['rating'],
-                'email_sent': email_sent,
-                'report': report
-            }).encode())
+            self.wfile.write(json.dumps(response_data).encode())
             
         except Exception as e:
             self.send_response(500)
