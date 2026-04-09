@@ -106,7 +106,9 @@ def build_email_content(records):
         student = r.get("student_name") or "—"
         date = r.get("session_date") or "—"
         score = r.get("score")
-        score_str = f"{score}/100" if score is not None else "—"
+        ct = r.get("course_type", "")
+        max_pts = 125 if "cars" in (ct or "").lower() else 135
+        score_str = f"{score}/{max_pts}" if score is not None else "—"
         rating = (r.get("rating") or "—").strip()
         report = (r.get("report_text") or "")[:2000]
         plain_parts.append(f"Evaluation #{i}")
